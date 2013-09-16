@@ -1,0 +1,14 @@
+package com.example.httpdemo;
+
+import com.xbcx.im.XIMSystem;
+
+public class MyImSystem extends XIMSystem{
+
+	@Override
+	public void onCreate() {
+		// TODO Auto-generated method stub
+		super.onCreate();
+	}
+	
+
+}

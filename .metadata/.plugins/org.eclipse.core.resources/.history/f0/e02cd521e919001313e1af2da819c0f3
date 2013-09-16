@@ -1,0 +1,209 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.myinterface.AdatperFuntion;
+import com.gtq.order.view.R;
+
+import android.content.Context;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+
+public class AlreadyFoodAdapter_OrderActivity extends BaseAdapter{
+	Context context;
+	ArrayList<FoodBean> foodBeans;
+	AdatperFuntion adatperFuntion;
+	public AlreadyFoodAdapter_OrderActivity(ArrayList<FoodBean> foodBeans,
+			Context context,AdatperFuntion adatperFuntion) {
+		this.foodBeans = foodBeans;
+		this.context = context;
+		this.adatperFuntion=adatperFuntion;
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return foodBeans.size();
+	}
+
+	@Override
+	public Object getItem(int position) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int position) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(final int position, View convertView,
+			ViewGroup parent) {
+		// TODO Auto-generated method stub
+		convertView = LayoutInflater.from(context).inflate(
+				R.layout.order_user_already_foodlist_item, null);
+		CheckBox checkBox = (CheckBox) convertView
+				.findViewById(R.id.order_user_already_food_checkbox);
+		checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView,
+					boolean isChecked) {
+				// TODO Auto-generated method stub
+				if (isChecked) {
+					foodBeans.get(position).setEdit(true);
+				}
+			}
+		});
+
+		TextView name = (TextView) convertView
+				.findViewById(R.id.order_user_already_food_name);
+		name.setText(foodBeans.get(position).getName());
+		final EditText price = (EditText) convertView
+				.findViewById(R.id.order_user_already_food_price);
+		final String foodprice = foodBeans.get(position).getPrice();
+		price.setText(foodprice);
+
+		price.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start,
+					int before, int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start,
+					int count, int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				// TODO Auto-generated method stub
+				
+				if (!price.getText().toString().equals("")) {
+
+					pay_money = pay_money
+							- Integer.valueOf(foodBeans.get(position)
+									.getCount())
+							* Float.valueOf(foodBeans.get(position)
+									.getFoodtprice())
+							+ Integer.valueOf(foodBeans.get(position)
+									.getCount())
+							* Float.valueOf(price.getText().toString());
+					order_user_item_text_money.setText("总金额："
+							+ String.valueOf(pay_money));
+					foodBeans.get(position).setFoodtprice(
+							price.getText().toString());
+				} else
+
+					price.setText(foodprice);
+
+			}
+		});
+		final EditText num = (EditText) convertView
+				.findViewById(R.id.order_user_already_food_number);
+		if (foodBeans.get(position).getCount() == null) {
+			num.setText("1");
+			foodBeans.get(position).setCount("1");
+		} else {
+			num.setText(foodBeans.get(position).getCount());
+
+		}
+
+		num.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start,
+					int before, int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start,
+					int count, int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				// TODO Auto-generated method stub
+
+				if (!num.getText().toString().equals("")) {
+					pay_money = pay_money
+							- Integer.valueOf(foodBeans.get(position)
+									.getCount())
+							* Float.valueOf(foodBeans.get(position)
+									.getPrice())
+							+ Integer.valueOf(num.getText().toString())
+							* Float.valueOf(foodBeans.get(position)
+									.getPrice());
+					order_user_item_text_money.setText("总金额："
+							+ String.valueOf(pay_money));
+
+					foodBeans.get(position).setCount(
+							num.getText().toString());
+				} else
+					num.setText("1");
+			}
+		});
+		final EditText require = (EditText) convertView
+				.findViewById(R.id.order_user_already_food_require);
+		if (foodBeans.get(position).getFoodRequire() != null)
+			require.setText(foodBeans.get(position).getFoodRequire());
+		else
+			require.setText("");
+		foodBeans.get(position)
+				.setFoodRequire(require.getText().toString());
+		require.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start,
+					int before, int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start,
+					int count, int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				// TODO Auto-generated method stub
+				foodBeans.get(position).setFoodRequire(
+						require.getText().toString());
+			}
+		});
+		TextView meal = (TextView) convertView
+				.findViewById(R.id.order_user_already_food_meal);
+		meal.setText(foodBeans.get(position).getMealTimes());
+		TextView date = (TextView) convertView
+				.findViewById(R.id.order_user_already_food_date);
+		String[] s = foodBeans.get(position).getDate().split("-");
+		date.setText(s[1] + "-" + s[2]);
+
+		return convertView;
+	}
+
+}

@@ -1,0 +1,51 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.Event;
+
+import android.os.Bundle;
+import android.os.StrictMode;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Context;
+import android.telephony.TelephonyManager;
+import android.view.Menu;
+
+public class MainActivity extends Activity {
+
+	@SuppressLint("NewApi")
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+	
+	    // Ïê¼ûStrictModeÎÄµµ
+        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()   // or .detectAll() for all detectable problems
+                .penaltyLog()
+                .build());
+        StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects()
+                .detectLeakedClosableObjects()
+                .penaltyLog()
+                .penaltyDeath()
+                .build());
+        LoginRunner loginRunner=new LoginRunner();
+ 
+        try {
+			loginRunner.onEventRun(new Event(84,new String[]{"398452027@qq.com","283719"}));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.activity_main, menu);
+		return true;
+	}
+
+}

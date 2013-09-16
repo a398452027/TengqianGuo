@@ -1,0 +1,64 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.Event;
+
+import com.xbcx.im.ui.XBaseActivity;
+import com.xbcx.im.ui.simpleimpl.RecentChatActivity;
+import com.xbcx.im.ui.simpleimpl.RecentChatAdapter;
+
+import android.os.Bundle;
+
+import android.annotation.SuppressLint;
+
+import android.view.Menu;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.ListView;
+
+public class MsglistActivity extends RecentChatActivity {
+
+
+	protected Button chat;
+	@SuppressLint("NewApi")
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		chat=(Button)findViewById(R.id.chat);
+		chat.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				JHSingleChatActivity.launch(MsglistActivity.this, id, name)
+			}
+		});
+
+	}
+	protected void init()
+	{
+		
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.activity_main, menu);
+		return true;
+	}
+
+	@Override
+	public void onEventRunEnd(Event event) {
+		// TODO Auto-generated method stub
+		super.onEventRunEnd(event);
+	}
+
+	@Override
+	protected void onInitAttribute(BaseAttribute ba) {
+		// TODO Auto-generated method stub
+		super.onInitAttribute(ba);
+
+		ba.mTitleTextStringId = R.string.lexin;
+	}
+
+}

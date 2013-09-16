@@ -1,0 +1,79 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.Event;
+import com.xbcx.im.ui.XBaseActivity;
+import com.xbcx.jianhua.BaseInfo;
+import com.xbcx.jianhua.JHApplication;
+import com.xbcx.jianhua.JHEventCode;
+import com.xbcx.jianhua.activity.MainActivity;
+
+
+
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+
+public class LoginActivity extends XBaseActivity implements View.OnClickListener{
+
+	EditText login_uidEditText;
+	EditText login_pwaEditText;
+	Button login_loginButton;
+	
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_login);
+		
+	}
+	protected void initView()
+	{
+		login_uidEditText=(EditText)findViewById(R.id.login_uidEditText);
+		login_pwaEditText=(EditText)findViewById(R.id.login_pwaEditText);
+		login_loginButton=(Button)findViewById(R.id.login_loginButton);
+		
+		login_loginButton.setOnClickListener(this);
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+	}
+	@Override
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+		if(v==login_loginButton)
+		{
+			final String user = login_uidEditText.getText().toString();
+			final String pwd = login_pwaEditText.getText().toString();
+			if(TextUtils.isEmpty(user) ||
+					TextUtils.isEmpty(pwd)){
+				return;
+			}
+			pushEvent(JHEventCode.HTTP_Login, user,pwd);
+		}
+		
+	}
+	@Override
+	public void onEventRunEnd(Event event) {
+		// TODO Auto-generated method stub
+		super.onEventRunEnd(event);
+		final int  code=event.getEventCode();
+		if(code == JHEventCode.HTTP_Login){
+			if(event.isSuccess()){
+			
+				
+			
+			
+			}
+		}
+	}
+	
+	
+	
+
+}

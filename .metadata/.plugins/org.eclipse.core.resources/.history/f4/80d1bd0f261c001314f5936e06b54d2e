@@ -1,0 +1,7 @@
+package com.example.httpdemo;
+
+import com.xbcx.im.ui.simpleimpl.AddressBooksActivity;
+
+public class FriendActivity extends AddressBooksActivity{
+
+}

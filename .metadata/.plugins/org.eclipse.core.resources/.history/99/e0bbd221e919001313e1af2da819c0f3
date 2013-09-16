@@ -1,0 +1,25 @@
+package com.gtq.order.myinterface;
+
+import android.widget.Button;
+import android.widget.EditText;
+
+public interface AdatperFuntion {
+	
+	/**回调按钮点击
+	 * @param b
+	 * @param buttonName
+	 */
+	public void adapterButtonClick(Button b,String buttonName,int position);
+	/**回调录入框变化
+	 * @param s
+	 * @param editTextName
+	 */
+	public void adapterTextChanged(EditText s,String editTextName,int position);
+	/**回调单选框变化
+	 * @param isChecked
+	 * @param CheckBoxName
+	 */
+	public void adapterCheckedChanged(boolean isChecked,String CheckBoxName,int position);
+	
+
+}

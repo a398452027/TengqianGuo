@@ -1,0 +1,69 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import com.gtq.order.db.DBAdapter;
+import com.gtq.order.myinterface.AdatperFuntion;
+
+import android.content.Context;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+public class TotalAdapter_GetFoodActivity extends BaseAdapter{
+	ArrayList<String> msg;
+	Context context;
+	AdatperFuntion adatperFuntion;
+	String date;
+	String mealId;
+	DBAdapter db;
+	public TotalAdapter_GetFoodActivity(ArrayList<String> msg
+			,Context context,AdatperFuntion adatperFuntion
+			,String date,String mealId
+			,DBAdapter db) {
+		this.msg = msg;
+		this.context=context;
+		this.adatperFuntion=adatperFuntion;
+		this.date=date;
+		this.mealId=mealId;
+		this.db=db;
+	}
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return msg.size();
+	}
+
+	@Override
+	public Object getItem(int position) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int position) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(int position, View convertView, ViewGroup parent) {
+		// TODO Auto-generated method stub
+		LinearLayout totile_layout = new LinearLayout(context);
+		totile_layout.setOrientation(LinearLayout.VERTICAL);
+		final LinearLayout sun_layout = addTotalFood(msg.get(position));
+		TextView textView=new TextView(context);
+		textView.setText(msg.get(position));
+		textView.setTextSize(25);
+		textView.setGravity(Gravity.CENTER);
+		totile_layout.addView(textView);
+		totile_layout.addView(sun_layout);
+		
+		
+		return totile_layout;
+	}
+
+}

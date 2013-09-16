@@ -1,0 +1,13 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.Event;
+
+public class LoginRunner extends HttpRunner{
+
+	@Override
+	public void onEventRun(Event event) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+}

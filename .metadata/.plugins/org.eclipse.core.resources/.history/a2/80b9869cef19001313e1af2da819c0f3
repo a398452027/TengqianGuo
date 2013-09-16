@@ -1,0 +1,83 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import com.gtq.order.view.GetfoodActivity;
+import com.gtq.order.view.R;
+
+import android.content.Context;
+import android.content.SharedPreferences.Editor;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.TextView;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+
+public class OfficeAdapter_GetFoodActivity extends BaseAdapter{
+	ArrayList<String> officedata;
+	Context context;
+	public OfficeAdapter_GetFoodActivity(ArrayList<String> officedata
+			,Context context) {
+		this.officedata = officedata;
+		this.context=context;
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return officedata.size();
+	}
+
+	@Override
+	public Object getItem(int arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int arg0) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(final int position, View convertView,
+			ViewGroup parent) {
+		// TODO Auto-generated method stub
+
+		convertView =LayoutInflater.from(context)
+				.inflate(R.layout.getfood_office_dialog_item, null);
+
+		TextView getfood_office_dialog_item_name = (TextView) convertView
+				.findViewById(R.id.getfood_office_dialog_item_name);
+		getfood_office_dialog_item_name.setText(officedata.get(position));
+		CheckBox getfood_office_dialog_item_cbox = (CheckBox) convertView
+				.findViewById(R.id.getfood_office_dialog_item_cbox);
+		getfood_office_dialog_item_cbox.setChecked(context.getSharedPreferences(
+				"office_select", Context.MODE_PRIVATE).getBoolean(
+				officedata.get(position), false));
+	
+		getfood_office_dialog_item_cbox
+				.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+					@Override
+					public void onCheckedChanged(CompoundButton buttonView,
+							boolean isChecked) {
+						// TODO Auto-generated method stub
+					
+						Editor editor = context.getSharedPreferences(
+								"office_select", Context.MODE_PRIVATE)
+								.edit();
+						editor.putBoolean(officedata.get(position),
+								isChecked);
+						editor.commit();
+					}
+				});
+		return convertView;
+
+	}
+
+}

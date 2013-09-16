@@ -1,0 +1,405 @@
+package com.gtq.order.view;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.StreamCorruptedException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.gtq.order.adapter.OrderListAdapter_MealActivity;
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.bean.OrderBean;
+import com.gtq.order.bean.UserBean;
+import com.gtq.order.db.DBAdapter;
+import com.gtq.order.tools.Constant;
+import com.gtq.order.tools.MyAsyncTask;
+import com.gtq.order.tools.SubmitXMLCreate;
+
+import android.app.Activity;
+import android.app.ListActivity;
+import android.app.ProgressDialog;
+import android.app.AlertDialog.Builder;
+import android.content.DialogInterface;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.opengl.Visibility;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Base64;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
+import android.widget.TextView;
+import android.widget.Toast;
+
+/**
+ * @description 订餐界面
+ * @version 1.0
+ * @author zdq
+ * @update 2013-7-1 下午2:52:39
+ */
+
+public class MealActiviyt extends Activity implements OnClickListener {
+
+	int read_type = 1;
+	ListView mealListView;
+	Button meal_submit, meal_delete;
+
+	OrderListAdapter_MealActivity OrderAdapter;
+	ArrayList<OrderBean> data;
+	ArrayList<OrderBean> orderDeletes;
+	ArrayList<FoodBean> fooddata;
+
+	ProgressDialog pdialog;
+	DBAdapter db;
+	TextView meal_order_nosubmit, meal_order_savesubmit;
+	Handler handler = new Handler() {
+
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			switch (msg.what) {
+			case 0:
+				if (pdialog == null)
+					pdialog = new ProgressDialog(MealActiviyt.this, 0);
+
+				pdialog.setTitle("上传中......");
+				pdialog.setButton("cancel",
+						new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog, int i) {
+								dialog.cancel();
+							}
+						});
+				pdialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+					public void onCancel(DialogInterface dialog) {
+
+					}
+				});
+				pdialog.setCancelable(true);
+				pdialog.setMax(100);
+				pdialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+				pdialog.show();
+				break;
+
+			}
+		}
+
+	};
+	ArrayList<FoodBean> deletes = new ArrayList<FoodBean>();
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.meal);
+		
+		db=new DBAdapter(this, 1);
+		db.open();
+		init(read_type);
+		
+	}
+	@Override
+	protected void onRestart() {
+		// TODO Auto-generated method stub
+		if(db==null)
+		{db=new DBAdapter(this,1);
+		db.open();
+		}
+		super.onRestart();
+	}
+
+
+
+
+	@Override
+	protected void onStart() {
+		// TODO Auto-generated method stub
+		if(db==null)
+		{db=new DBAdapter(this,1);
+		db.open();
+		}
+		super.onStart();
+	}
+
+
+
+
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		if(db!=null)
+		
+			db.close();
+		db=null;
+		
+		super.onPause();
+	}
+
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		if(db!=null)
+			db.close();
+		super.onDestroy();
+	}
+
+
+	/**
+	 * @param data
+	 * @param orderId
+	 * @description 得到食物列表
+	 * 
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-7-4 下午1:40:34
+	 */
+	void initfoodlistbyorderid(ArrayList<FoodBean> data, String orderId) {
+		if(db==null)
+		{	 db = new DBAdapter(MealActiviyt.this, 1);
+			db.open();
+		}
+		db.initfoodlistByOrderId(data, orderId);
+	
+	}
+
+	/**
+	 * @param data
+	 * @description 得到订餐列表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-7-4 下午12:40:57
+	 */
+	void inituserlist(ArrayList<OrderBean> data, int read_type) {
+
+		if(db!=null)
+		{	 db = new DBAdapter(MealActiviyt.this, 1);
+			db.open();
+		}
+		db.initOrderList(data, String.valueOf(read_type));
+		
+	}
+
+	/**
+	 * 
+	 * @description 初始化界面
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-7-4 下午12:41:12
+	 */
+	void init(int read_type) {
+		data = new ArrayList<OrderBean>();
+
+		inituserlist(data, read_type);
+		mealListView = (ListView) findViewById(R.id.meal_user_list);
+		OrderAdapter = new OrderListAdapter_MealActivity(data,this,read_type);
+		mealListView.setAdapter(OrderAdapter);
+		meal_delete = (Button) findViewById(R.id.meal_delete);
+		meal_delete.setOnClickListener(this);
+		meal_submit = (Button) findViewById(R.id.meal_submit);
+		meal_submit.setOnClickListener(this);
+
+		meal_order_nosubmit = (TextView) findViewById(R.id.meal_order_nosubmit);
+		meal_order_nosubmit.setOnClickListener(this);
+
+		meal_order_savesubmit = (TextView) findViewById(R.id.meal_order_savesubmit);
+		meal_order_savesubmit.setOnClickListener(this);
+		if (read_type == 3) {
+			meal_submit.setVisibility(View.GONE);
+		} else if (read_type == 1) {
+			meal_submit.setVisibility(View.VISIBLE);
+		}
+
+	}
+
+	/**
+	 * @description 订单列表适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-7-28 下午5:10:42
+	 */
+
+//	class MylistAdapter extends BaseAdapter {
+//		ArrayList<OrderBean> data;
+//
+//		public MylistAdapter(ArrayList<OrderBean> data) {
+//			this.data = data;
+//		}
+//
+//		@Override
+//		public int getCount() {
+//			// TODO Auto-generated method stub
+//			return data.size();
+//		}
+//
+//		@Override
+//		public Object getItem(int arg0) {
+//			// TODO Auto-generated method stub
+//			return null;
+//		}
+//
+//		@Override
+//		public long getItemId(int arg0) {
+//			// TODO Auto-generated method stub
+//			return 0;
+//		}
+//
+//		@Override
+//		public View getView(final int position, View convertView,
+//				ViewGroup parent) {
+//			// TODO Auto-generated method stub
+//			View view = getLayoutInflater().inflate(
+//					R.layout.meal_user_list_item, null);
+//			meal_user_list_edit = (Button) view
+//					.findViewById(R.id.meal_user_list_edit);
+//			if (read_type == 2)
+//				meal_user_list_edit.setVisibility(View.GONE);
+//			meal_user_list_edit.setOnClickListener(new OnClickListener() {
+//
+//				@Override
+//				public void onClick(View v) {
+//					// TODO Auto-generated method stub
+//					if (read_type == 1)
+//						savetoOrder(position, read_type);
+//					else if (read_type == 3) {
+//						savetoOrder(position, read_type);
+//					}
+//				}
+//			});
+//			CheckBox meal_user_list_CheckBox = (CheckBox) view
+//					.findViewById(R.id.meal_user_list_CheckBox);
+//			meal_user_list_CheckBox
+//					.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+//
+//						@Override
+//						public void onCheckedChanged(CompoundButton buttonView,
+//								boolean isChecked) {
+//							// TODO Auto-generated method stub
+//							if (isChecked) {
+//								data.get(position).setEdit(true);
+//
+//							}
+//						}
+//					});
+//			TextView meal_user_list_userid = (TextView) view
+//					.findViewById(R.id.meal_user_list_userid);
+//			TextView meal_user_list_office = (TextView) view
+//					.findViewById(R.id.meal_user_list_office);
+//			TextView meal_user_list_bednumber = (TextView) view
+//					.findViewById(R.id.meal_user_list_bednumber);
+//		
+//			TextView meal_user_list_time = (TextView) view
+//					.findViewById(R.id.meal_user_list_time);
+//			meal_user_list_userid.setText(data.get(position).getPatientid());
+//			meal_user_list_office.setText(data.get(position).getDepid());
+//			meal_user_list_bednumber.setText(data.get(position).getBednum());
+//			
+//			meal_user_list_time.setText(data.get(position).getDiningdate());
+//			return view;
+//		}
+
+//	}
+
+
+
+
+	/**
+	 * @param position
+	 * @description 重新点餐
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-7-28 下午9:15:28
+	 */
+	void savetoOrder(int position, int read_type) {
+		String orderid = data.get(position).getOrderid();
+		Intent intent = new Intent(MealActiviyt.this, OrderActivity.class);
+		intent.putExtra("orderid", orderid);
+		intent.putExtra("parent", "meal");
+		intent.putExtra("read_type", read_type);
+		startActivity(intent);
+	}
+
+	
+	@Override
+	public void onClick(View arg0) {
+
+		// TODO Auto-generated method stub
+		//
+		if (arg0 == meal_delete) {
+
+			orderDeletes = new ArrayList<OrderBean>();
+			for (OrderBean orderBean : data) {
+				if (orderBean.isEdit()) {
+					orderDeletes.add(orderBean);
+				}
+			}
+			data.removeAll(orderDeletes);
+			OrderAdapter.notifyDataSetChanged();
+			if(db!=null)
+			{	 db = new DBAdapter(MealActiviyt.this, 1);
+				db.open();
+			}
+			db.deleteOrder(orderDeletes);
+			
+
+		} else if (arg0 == meal_submit) {
+			ArrayList<String> arrayList = new ArrayList<String>();
+			
+		
+			SubmitXMLCreate create = new SubmitXMLCreate(db);
+			for (OrderBean orderBean : data) {
+				arrayList.add(orderBean.getOrderid());
+			}
+			try {
+				create.CreateOrderXml(arrayList);
+				MyAsyncTask asyncTask = new MyAsyncTask(this, handler,
+						MyAsyncTask.UploadOrder);
+				asyncTask.execute(new String[] {
+						Constant.URL,
+						"UploadOrderXML", "yykpad", "pumoto",
+						create.xml2String() });
+
+				Toast.makeText(this, "提交成功", Toast.LENGTH_LONG).show();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Toast.makeText(this, "提交失败", Toast.LENGTH_LONG).show();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Toast.makeText(this, "提交失败", Toast.LENGTH_LONG).show();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Toast.makeText(this, "提交失败", Toast.LENGTH_LONG).show();
+			}
+		} else if (arg0 == meal_order_nosubmit) {
+			read_type = 1;
+			init(read_type);
+		}
+
+		else if (arg0 == meal_order_savesubmit) {
+			read_type = 3;
+			init(read_type);
+		}
+
+	}
+
+}

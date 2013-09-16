@@ -1,0 +1,94 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import android.content.Context;
+import android.content.SharedPreferences.Editor;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.View.OnClickListener;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.LinearLayout;
+
+import com.gtq.order.myinterface.AdatperFuntion;
+import com.gtq.order.view.GetfoodActivity;
+
+public class SendFoodAdapter_GetfoodActivity extends BaseAdapter{
+	ArrayList<String> ids;
+	Context context;
+	AdatperFuntion adatperFuntion;
+	public SendFoodAdapter_GetfoodActivity(ArrayList<String> ids
+			,Context context,AdatperFuntion adatperFuntion) {
+		this.ids = ids;
+		this.context=context;
+		this.adatperFuntion=adatperFuntion;
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return ids.size();
+	}
+
+	@Override
+	public Object getItem(int arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int position) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(final int position, View convertView,
+			ViewGroup parent) {
+		// TODO Auto-generated method stub
+		// if(ids.get(position).get("type").equals("dname"))
+		// {
+		LinearLayout totile_layout = new LinearLayout(context);
+		totile_layout.setOrientation(LinearLayout.VERTICAL);
+		final LinearLayout sun_layout = addSendFood(ids.get(position));
+
+		if(sun_layout!=null)
+			
+		
+		{sun_layout.setVisibility(context.getSharedPreferences("Visibility",
+				Context.MODE_PRIVATE).getInt(ids.get(position),
+				View.GONE));
+		Button button = new Button(context);
+		
+		button.setText(ids.get(position));
+		button.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				if (sun_layout.getVisibility() == View.GONE) {
+				
+					Editor editor = context.getSharedPreferences("Visibility",
+							Context.MODE_PRIVATE).edit();
+					editor.putInt(ids.get(position),
+							View.VISIBLE);
+					editor.commit();
+					sun_layout.setVisibility(View.VISIBLE);
+				} else {
+					Editor editor = context.getSharedPreferences("Visibility",
+							Context.MODE_PRIVATE).edit();
+					editor.putInt(ids.get(position), View.GONE);
+					editor.commit();
+					sun_layout.setVisibility(View.GONE);
+				}
+			}
+		});
+		totile_layout.addView(button);
+		totile_layout.addView(sun_layout);
+		}
+
+		return totile_layout;
+	}
+
+}

@@ -1,0 +1,28 @@
+package com.example.httpdemo;
+
+import java.net.URLEncoder;
+import java.util.Locale;
+
+import org.json.JSONObject;
+
+import com.xbcx.core.Event;
+
+import com.xbcx.utils.Encrypter;
+
+public class LoginRunner extends HttpRunner{
+
+	@Override
+	public void onEventRun(Event event) throws Exception {
+		// TODO Auto-generated method stub
+		final String user = (String)event.getParamAtIndex(0);
+		final String pwd = (String)event.getParamAtIndex(1);
+		JSONObject jo = doGet(String.format(
+				Locale.getDefault(), "http://xbcx.com.cn/lianhuaxingke/index.php?g=Api&" +
+						"a=index&m=Login&user=%s&pwd=%s", 
+				URLEncoder.encode(user + "-" + Encrypter.encryptBySHA1(user + KEY_HTTP)),
+				Encrypter.encryptByMD5(pwd)));
+		event.addReturnParam(new BaseInfo(jo));
+		event.setSuccess(true);
+	}
+
+}

@@ -1,0 +1,97 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.db.DBAdapter;
+import com.gtq.order.tools.OthersTool;
+import com.gtq.order.view.R;
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.View.OnClickListener;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.TextView;
+
+public class AnalysisAdapter_OrderActivity extends BaseAdapter{
+	
+	ArrayList<FoodBean> data;
+	ArrayList<String> dates = new ArrayList<String>();
+	Context context;
+	DBAdapter db;
+	public AnalysisAdapter_OrderActivity(ArrayList<FoodBean> data,Context context) {
+		// TODO Auto-generated constructor stub
+		
+		this.data = data;
+		this.context=context;
+		
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+
+		for (FoodBean bean : data) {
+			if (dates.size() == 0)
+				dates.add(bean.getDate());
+			else {
+				for (int i = 0; i < dates.size(); i++) {
+					if (dates.get(i).equals(bean.getDate()))
+						break;
+					if (i == dates.size() - 1) {
+						dates.add(bean.getDate());
+						break;
+					}
+				}
+			}
+		}
+		return dates.size();
+	}
+
+	@Override
+	public Object getItem(int arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int arg0) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(int arg0, View arg1, ViewGroup arg2) {
+		// TODO Auto-generated method stub
+		arg1 = LayoutInflater.from(context).inflate(
+				R.layout.order_analysis_listview_item, null);
+		Button order_analysis_item_data_button = (Button) arg1
+				.findViewById(R.id.order_analysis_item_data_button);
+		final TextView order_analysis_item_msg = (TextView) arg1
+				.findViewById(R.id.order_analysis_item_msg);
+		order_analysis_item_data_button.setText(dates.get(arg0));
+		order_analysis_item_data_button
+				.setOnClickListener(new OnClickListener() {
+
+					@Override
+					public void onClick(View v) {
+						// TODO Auto-generated method stub
+						if (order_analysis_item_msg.getVisibility() == View.GONE) {
+							order_analysis_item_msg
+									.setVisibility(View.VISIBLE);
+						} else
+							order_analysis_item_msg
+									.setVisibility(View.GONE);
+						;
+					}
+				});
+		order_analysis_item_msg.setText(OthersTool.getAnalysisMsg(dates.get(arg0),
+				data, db));
+
+		return arg1;
+	}
+
+}

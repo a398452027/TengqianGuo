@@ -1,0 +1,26 @@
+package com.example.httpdemo;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.EditText;
+
+public class LoginActivity extends Activity{
+
+	EditText login_uidEditText;
+	EditText login_pwaEditText;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+	}
+	
+	
+
+}

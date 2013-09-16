@@ -1,0 +1,54 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.Event;
+
+import com.xbcx.im.ui.XBaseActivity;
+import com.xbcx.im.ui.simpleimpl.RecentChatActivity;
+import com.xbcx.im.ui.simpleimpl.RecentChatAdapter;
+
+import android.os.Bundle;
+
+import android.annotation.SuppressLint;
+
+import android.view.Menu;
+import android.widget.ListView;
+
+public class MsglistActivity extends RecentChatActivity {
+
+	protected ListView			mListView;
+	protected RecentChatAdapter	mAdapter;
+	@SuppressLint("NewApi")
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		
+		
+
+	}
+	protected void init()
+	{
+		
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.activity_main, menu);
+		return true;
+	}
+
+	@Override
+	public void onEventRunEnd(Event event) {
+		// TODO Auto-generated method stub
+		super.onEventRunEnd(event);
+	}
+
+	@Override
+	protected void onInitAttribute(BaseAttribute ba) {
+		// TODO Auto-generated method stub
+		super.onInitAttribute(ba);
+
+		ba.mTitleTextStringId = R.string.lexin;
+	}
+
+}

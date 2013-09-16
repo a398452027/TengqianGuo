@@ -1,0 +1,33 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.Event;
+import com.xbcx.im.ui.XBaseActivity;
+
+import android.os.Bundle;
+import android.os.StrictMode;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Context;
+import android.telephony.TelephonyManager;
+import android.view.Menu;
+
+public class MainActivity extends XBaseActivity {
+
+	@SuppressLint("NewApi")
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+	
+        
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.activity_main, menu);
+		return true;
+	}
+	
+	
+
+}

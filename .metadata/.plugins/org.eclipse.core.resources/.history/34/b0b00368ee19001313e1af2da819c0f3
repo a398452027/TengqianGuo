@@ -1,0 +1,934 @@
+package com.gtq.order.view;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.zip.Inflater;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import com.gtq.order.adapter.SendFoodAdapter_GetfoodActivity;
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.bean.OrderBean;
+import com.gtq.order.calendar.ui.DatePopupWindow;
+import com.gtq.order.db.DBAdapter;
+import com.gtq.order.myinterface.AdatperFuntion;
+import com.gtq.order.tools.MyAsyncTask;
+import com.gtq.order.tools.SubmitXMLCreate;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences.Editor;
+import android.graphics.Color;
+import android.opengl.Visibility;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Xml;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
+import android.widget.AbsListView.OnScrollListener;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.AbsListView;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+import android.widget.SlidingDrawer;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class GetfoodActivity extends Activity implements OnClickListener ,AdatperFuntion{
+
+	Button getfood_date, getfood_mealtimes, getfood_office;
+	SlidingDrawer getfood_slidingdrawer;
+	Button getfood_slidingdrawer_handle,getfood_send_TextView_dep, getfood_download, getfood_look_up;
+	LinearLayout getfood_slidingdrawer_content;
+	ListView office_list, getfood_send_ListView,getfood_total_ListView;
+	
+	PyQuickBar alpha;
+	DBAdapter db;
+	TextView getfood_office_fast_position, getfood_office_select_text;
+	ArrayList<String> officedata, selectOffice, selectOfficeIDs,showOfficeName, pids;
+	String mealId, date;
+	SendFoodAdapter_GetfoodActivity sendAdapter;
+	totaladapter totaladapter;
+	officeAdapter oAdapter;
+	
+
+	// POPwindow接收消息
+	Handler myHandler = new Handler() {
+
+		@Override
+		public void handleMessage(Message msg) {
+			Bundle data = msg.getData();
+			String parent = data.getString("parent");
+			String result = data.getString("result");
+
+			if (parent != null) {
+				if (parent.equals("date")) {
+					String month = String.valueOf(data.getInt("month") + 1);
+					String day = String.valueOf(data.getInt("day"));
+					if (data.getInt("month") < 10)
+						month = "0" + month;
+					if (data.getInt("day") < 10)
+						day = "0" + day;
+
+					getfood_date.setText(data.getInt("year") + "-" + month
+							+ "-" + day);
+				} else if (parent.equals("meal")) {
+
+					getfood_mealtimes.setText(data.getString("value"));
+				} else if (parent.equals("office")) {
+					getfood_office.setText(data.getString("value"));
+				}
+
+			}
+			if (result != null) {
+				if (result.equals("ok")) {
+					Toast.makeText(GetfoodActivity.this, "下载送餐信息完成",
+							Toast.LENGTH_LONG).show();
+				}
+			}
+		}
+
+	};
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.getfood);
+		try {
+			db=new DBAdapter(this, 1);
+			db.open();
+			init();
+			Editor editor = getSharedPreferences("Visibility",
+					Context.MODE_PRIVATE).edit();
+			editor.clear();
+			editor.commit();
+			editor = getSharedPreferences("issend", Context.MODE_PRIVATE)
+					.edit();
+			editor.clear();
+			editor.commit();
+			 editor=getSharedPreferences("totalfood_issend", Context.MODE_PRIVATE).edit();
+			 editor.clear();
+			editor.commit();
+		} catch (XmlPullParserException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	@Override
+	protected void onRestart() {
+		// TODO Auto-generated method stub
+		if(db==null)
+		{db=new DBAdapter(this,1);
+		db.open();
+		}
+		super.onRestart();
+	}
+
+
+
+
+	@Override
+	protected void onStart() {
+		// TODO Auto-generated method stub
+		if(db==null)
+		{db=new DBAdapter(this,1);
+		db.open();
+		}
+		super.onStart();
+	}
+
+
+
+
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		if(db!=null)
+		
+			db.close();
+		db=null;
+		
+		super.onPause();
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		if(db!=null)
+		db.close();
+		db=null;
+		super.onDestroy();
+	}
+
+
+	/**
+	 * @throws XmlPullParserException
+	 * @throws IOException
+	 * @description 初始化界面
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:27:34
+	 */
+	public void init() throws XmlPullParserException, IOException {
+
+		getfood_total_ListView=(ListView)findViewById(R.id.getfood_total_ListView);
+		
+		getfood_send_ListView = (ListView) findViewById(R.id.getfood_send_ListView);
+		getfood_send_TextView_dep = (Button) findViewById(R.id.getfood_send_TextView_dep);
+
+		selectOfficeIDs = new ArrayList<String>();
+		getfood_office_select_text = (TextView) findViewById(R.id.getfood_office_select_text);
+		getfood_download = (Button) findViewById(R.id.getfood_download);
+		getfood_download.setOnClickListener(this);
+		getfood_look_up = (Button) findViewById(R.id.getfood_look_up);
+		getfood_look_up.setOnClickListener(this);
+
+		selectOffice = new ArrayList<String>();
+		// getfood_listview = (ListView) findViewById(R.id.getfood_listview);
+		// orderBeans=new ArrayList<OrderBean>();
+		// initSendFoodList(orderBeans);
+		// adapter=new myadapter(orderBeans);
+		// getfood_listview.setAdapter(adapter);
+		getfood_date = (Button) findViewById(R.id.getfood_date);
+
+		Calendar cal = Calendar.getInstance();
+		String month = String.valueOf((cal.get(Calendar.MONTH) + 1));
+		String day = String.valueOf(cal.get(Calendar.DAY_OF_MONTH));
+		if ((cal.get(Calendar.MONTH) + 1) < 10)
+			month = "0" + month;
+		if (cal.get(Calendar.DAY_OF_MONTH) < 10)
+			day = "0" + day;
+		getfood_date.setText(cal.get(Calendar.YEAR) + "-" + month + "-" + day);
+
+		getfood_date.setOnClickListener(this);
+		getfood_mealtimes = (Button) findViewById(R.id.getfood_mealtimes);
+		getfood_mealtimes.setOnClickListener(this);
+		getfood_office = (Button) findViewById(R.id.getfood_office);
+		getfood_office.setOnClickListener(this);
+
+	}
+
+	/**
+	 * @param arrayList
+	 * @description 初始化餐次
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-7-8
+	 */
+	void initmealList(ArrayList<String> arrayList) {
+	
+		db.initMealList(arrayList);
+		
+
+	}
+
+	/**
+	 * @param arrayList
+	 * @description 初始化科室
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:27:00
+	 */
+	void initofficeList(ArrayList<String> arrayList) {
+		
+		db.initUserDep(arrayList);
+	
+
+	}
+
+	/**
+	 * @param depAndBed
+	 * @return
+	 * @description 得到具体送餐食物
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午12:19:27
+	 */
+	String getsendFood(String depAndBed) {
+
+		if(db==null)
+		{	 db = new DBAdapter(this, 1);
+			db.open();
+		}
+		String msg = db.getSendFood(depAndBed);
+	
+		return msg;
+	}
+	/**
+	 * @param dname
+	 * @return
+	 * @description 添加送餐合计信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午5:19:49
+	 */
+	LinearLayout addTotalFood(String dname)
+	{
+		LinearLayout layout = new LinearLayout(this);
+		layout.setOrientation(LinearLayout.VERTICAL);
+	
+		ArrayList<FoodBean> beans = db.getSendFoodByDate(date, mealId, dname);
+	
+		for (final FoodBean bean : beans) {
+			
+			getLayoutInflater();
+			View view = LayoutInflater.from(this).inflate(
+					R.layout.getfood_statistics_list_item, null);
+			CheckBox getfood_statistics_list_checkbox=(CheckBox)
+					view.findViewById(R.id.getfood_statistics_list_checkbox);
+			getfood_statistics_list_checkbox.setChecked(
+					getSharedPreferences("totalfood_issend", Context.MODE_PRIVATE).getBoolean(bean.getName()+
+							bean.getFoodRequire(), false));
+			getfood_statistics_list_checkbox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+				
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					// TODO Auto-generated method stub
+					Editor editor=getSharedPreferences("totalfood_issend", Context.MODE_PRIVATE).edit();
+					editor.putBoolean(bean.getName()+
+							bean.getFoodRequire(), isChecked);
+					editor.commit();
+				}
+			});
+			TextView getfood_statistics_list_name = (TextView) view
+					.findViewById(R.id.getfood_statistics_list_name);
+			getfood_statistics_list_name
+					.setText(bean.getName());
+			TextView getfood_statistics_list_num = (TextView) view
+					.findViewById(R.id.getfood_statistics_list_num);
+			getfood_statistics_list_num
+					.setText(bean.getCount());
+			TextView getfood_statistics_list_req = (TextView) view
+					.findViewById(R.id.getfood_statistics_list_req);
+			if(bean.getFoodRequire()!=null)
+			getfood_statistics_list_req
+					.setText(bean.getFoodRequire());
+			layout.addView(view);
+		}
+		
+		return layout;
+	}
+	/**
+	 * @param dname
+	 * @return
+	 * @description 添加送餐食品信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午5:04:30
+	 */
+	LinearLayout addSendFood(String dname) {
+		LinearLayout layout = new LinearLayout(this);
+		layout.setOrientation(LinearLayout.VERTICAL);
+		// layout.setLayoutParams(new
+		// LinearLayout.LayoutParams(LayoutParams.FILL_PARENT,
+		// LayoutParams.WRAP_CONTENT));
+
+		// layout.setBackgroundColor(Color.RED);
+	
+		ArrayList<String> pid = db.getsendPid(dname, date, mealId);
+	
+		for (final String dnameAndBed : pid) {
+			getLayoutInflater();
+			View view = LayoutInflater.from(this).inflate(
+					R.layout.getfood_order_item, null);
+			TextView getfood_order_item_patient = (TextView) view
+					.findViewById(R.id.getfood_order_item_patient);
+			// getfood_order_item_patient.setVisibility(View.VISIBLE);
+			getfood_order_item_patient.setText(dnameAndBed);
+			TextView getfood_order_item_food_foodmsg = (TextView) view
+					.findViewById(R.id.getfood_order_item_food_foodmsg);
+			getfood_order_item_food_foodmsg
+					.setText(db.getSendFood(dnameAndBed));
+
+			CheckBox getfood_order_item_CheckBox = (CheckBox) view
+					.findViewById(R.id.getfood_order_item_CheckBox);
+			getfood_order_item_CheckBox.setChecked(getSharedPreferences(
+					"issend", Context.MODE_PRIVATE).getBoolean(dnameAndBed,
+					false));
+			getfood_order_item_CheckBox
+					.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+						@Override
+						public void onCheckedChanged(CompoundButton buttonView,
+								boolean isChecked) {
+							// TODO Auto-generated method stub
+							Editor editor = getSharedPreferences("issend",
+									Context.MODE_PRIVATE).edit();
+							editor.putBoolean(dnameAndBed, isChecked);
+							editor.commit();
+						}
+					});
+			layout.addView(view);
+			
+		
+		}
+	
+		return layout;
+
+	}
+
+	
+
+	
+
+	@Override
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+		// 日期点击
+		if (v == getfood_date) {
+			DatePopupWindow datePopupWindow = new DatePopupWindow(
+					GetfoodActivity.this, getWindowManager()
+							.getDefaultDisplay().getWidth(),
+					getfood_date.getWidth(), getLayoutInflater(), myHandler);
+			datePopupWindow.showAsDropDown(getfood_date, 0, -5);
+		}
+		// 餐次点击
+		else if (v == getfood_mealtimes) {
+			ArrayList<String> arrayList = new ArrayList<String>();
+			initmealList(arrayList);
+			MyPopWindow myPopWindow = new MyPopWindow(GetfoodActivity.this,
+					new ListView(GetfoodActivity.this), arrayList,
+					getfood_mealtimes.getWidth(), myHandler, "meal");
+
+			myPopWindow.showAsDropDown(getfood_mealtimes, 0, -5);
+		}
+		// 科室点击
+		else if (v == getfood_office) {
+			selectOffice.clear();
+			AlertDialog alertDialog;
+			Editor editor = getSharedPreferences(
+					"office_select", Context.MODE_PRIVATE)
+					.edit();
+			editor.clear();
+			editor.commit();
+			try {
+				alertDialog = showOfficeSelectDialog();
+				alertDialog.show();
+			} catch (SecurityException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchFieldException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+		// 查询点击
+		else if (v == getfood_look_up) {
+			initSendMsg();
+
+			addSendMsg();
+			addTotalMsg();
+			// getfood_listview.setAdapter(sendAdapter);
+		}
+		// 下载点击
+		else if (v == getfood_download) {
+			initSendMsg();
+			try {
+				MyAsyncTask asyncTask = new MyAsyncTask(this, myHandler,
+						MyAsyncTask.SEND_DOWNLOAD);
+				String xml = SubmitXMLCreate.createSendXml(date,
+						selectOfficeIDs, mealId);
+				asyncTask.execute(new String[] { "send", xml });
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		// 合计点击
+		// else if (v == getfood_statistics) {
+		//
+		// Intent intent = new Intent(this, GetfoodStatisticsActivity.class);
+		// intent.putExtra("date", getfood_date.getText().toString());
+		// if (!getfood_mealtimes.getText().toString().equals(""))
+		// intent.putExtra("mealid", getfood_mealtimes.getText()
+		// .toString());
+		// else
+		// Toast.makeText(this, "请先选择餐次", Toast.LENGTH_LONG).show();
+		// startActivity(intent);
+		//
+		// }
+	}
+	void addTotalMsg()
+	{
+		if (selectOffice != null) {
+			
+		
+		totaladapter=new totaladapter(showOfficeName);
+		getfood_total_ListView.setAdapter(totaladapter);
+		}
+	}
+
+	/**
+	 * 
+	 * @description 显示送餐信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午3:04:24
+	 */
+	void addSendMsg() {
+		
+		
+			sendAdapter = new SendFoodAdapter_GetfoodActivity(showOfficeName
+					,this,this,date,mealId,db);
+			getfood_send_ListView.setAdapter(sendAdapter);
+			getfood_send_ListView.setOnScrollListener(new OnScrollListener() {
+
+				@Override
+				public void onScrollStateChanged(AbsListView view,
+						int scrollState) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void onScroll(final AbsListView view,
+						final int firstVisibleItem, int visibleItemCount,
+						int totalItemCount) {
+					// TODO Auto-generated method stub
+					final LinearLayout layout = (LinearLayout) view
+							.getChildAt(0);
+					if(layout!=null)
+					{if (layout.getChildCount() != 0) {
+						if (layout.getChildAt(1).getVisibility() == View.GONE)
+							getfood_send_TextView_dep.setVisibility(View.GONE);
+						else {
+							getfood_send_TextView_dep
+									.setVisibility(View.VISIBLE);
+							getfood_send_TextView_dep.setText(showOfficeName
+									.get(firstVisibleItem));
+							getfood_send_TextView_dep
+									.setOnClickListener(new OnClickListener() {
+
+										@Override
+										public void onClick(View v) {
+											// TODO Auto-generated method stub
+											Editor editor = getSharedPreferences(
+													"Visibility",
+													Context.MODE_PRIVATE)
+													.edit();
+											editor.putInt(
+													showOfficeName.get(
+															firstVisibleItem)
+															,
+													View.GONE);
+											editor.commit();
+											layout.getChildAt(1).setVisibility(
+													View.GONE);
+											getfood_send_ListView.setSelection(firstVisibleItem);
+										}
+									});
+						}
+					}
+
+				}
+				}
+			});
+
+		}
+	
+
+	/**
+	 * 
+	 * @description 初始化时间餐次ID，已选科室
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午3:05:32
+	 */
+	void initSendMsg() {
+		Editor editor = getSharedPreferences("Visibility",
+				Context.MODE_PRIVATE).edit();
+		editor.clear();
+		editor.commit();
+		selectOfficeIDs.clear();
+		ArrayList<String> deleteOffice=new ArrayList<String>();
+		
+		date = getfood_date.getText().toString();
+		
+		showOfficeName=new ArrayList<String>();
+		mealId = db.getMealidByname(getfood_mealtimes.getText().toString());
+		for (String name : selectOffice) {
+			if(db.getsendPid(name, date, mealId).size()==0)
+				deleteOffice.add(name);
+			else
+			selectOfficeIDs.add(db.getDidbyName(name));
+			
+			showOfficeName.add(name);
+		
+		}
+		
+	
+	
+	 showOfficeName.removeAll(deleteOffice);
+
+
+		
+		
+	}
+	
+
+	@Override
+	public void onBackPressed() {
+		// TODO Auto-generated method stub
+		Builder builder=new Builder(this);
+		builder.setTitle("提示");
+		builder.setMessage("退出将清空已送情况，确定要退出？");
+		builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+			
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+				back();
+			}
+		});
+		builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+			
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+		builder.create().show();
+		
+	}
+	
+	public void back()
+	{
+		super.onBackPressed();
+	}
+
+	/**
+	 * @return
+	 * @description 科室选择对话框
+	 * @version 1.0
+	 * @author zdq
+	 * @throws NoSuchFieldException
+	 * @throws SecurityException
+	 * @throws IllegalAccessException
+	 * @throws IllegalArgumentException
+	 * @update 2013-8-10 上午1:29:21
+	 */
+	AlertDialog showOfficeSelectDialog() throws SecurityException,
+			NoSuchFieldException, IllegalArgumentException,
+			IllegalAccessException {
+		View view = getLayoutInflater().from(this).inflate(
+				R.layout.getfood_office_dialog, null);
+		office_list = (ListView) view
+				.findViewById(R.id.getfood_office_listview);
+		officedata = new ArrayList<String>();
+		initofficeList(officedata);
+		oAdapter = new officeAdapter(officedata);
+		office_list.setAdapter(oAdapter);
+		getfood_office_fast_position = (TextView) view
+				.findViewById(R.id.getfood_office_fast_position);
+		alpha = (PyQuickBar) view.findViewById(R.id.getfood_office_LYZ);
+		alpha.init(this, getfood_office_fast_position);
+
+		AlertDialog.Builder builder = new Builder(this);
+		builder.setTitle("选择科室");
+		builder.setView(view);
+
+		AlertDialog dialog = builder.create();
+		dialog.setButton("确定", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+				for(String dname:officedata)
+				{
+					if(getSharedPreferences("office_select",
+							Context.MODE_PRIVATE).getBoolean(dname, false))
+						selectOffice.add(dname);
+					else
+						selectOffice.remove(dname);
+				}
+				if (selectOffice.size() != 0) {
+					getfood_office_select_text.setText("已选择科室:\n");
+					for (int i = 0; i < selectOffice.size(); i++) {
+						if (i != selectOffice.size() - 1)
+							getfood_office_select_text.append((i + 1) + ":"
+									+ selectOffice.get(i) + "  ");
+						else
+							getfood_office_select_text.append((i + 1) + ":"
+									+ selectOffice.get(i));
+					}
+
+				}
+				Field field;
+				try {
+					field = dialog.getClass().getSuperclass()
+							.getDeclaredField("mShowing");
+					field.setAccessible(true);
+					field.set(dialog, true);
+				} catch (SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (NoSuchFieldException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalArgumentException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+		});
+		dialog.setButton3("反选", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+				Field field;
+				try {
+					field = dialog.getClass().getSuperclass()
+							.getDeclaredField("mShowing");
+					field.setAccessible(true);
+					field.set(dialog, false);
+				} catch (SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (NoSuchFieldException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalArgumentException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				for (String dname : officedata) {
+					Editor editor = getSharedPreferences("office_select",
+							Context.MODE_PRIVATE).edit();
+					editor.putBoolean(
+							dname,
+							!getSharedPreferences("office_select",
+									Context.MODE_PRIVATE).getBoolean(dname,
+									false));
+					editor.commit();
+				}
+
+				oAdapter.notifyDataSetChanged();
+
+			}
+		});
+		dialog.setButton2("关闭", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+
+				Field field;
+				try {
+					field = dialog.getClass().getSuperclass()
+							.getDeclaredField("mShowing");
+					field.setAccessible(true);
+					field.set(dialog, true);
+				} catch (SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (NoSuchFieldException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalArgumentException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+		});
+
+		return dialog;
+
+	}
+
+	/**
+	 * @description 科室适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:29:42
+	 */
+
+	class officeAdapter extends BaseAdapter {
+
+		ArrayList<String> officedata;
+
+		public officeAdapter(ArrayList<String> officedata) {
+			this.officedata = officedata;
+		}
+
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+			return officedata.size();
+		}
+
+		@Override
+		public Object getItem(int arg0) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public long getItemId(int arg0) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public View getView(final int position, View convertView,
+				ViewGroup parent) {
+			// TODO Auto-generated method stub
+
+			convertView = getLayoutInflater().from(GetfoodActivity.this)
+					.inflate(R.layout.getfood_office_dialog_item, null);
+
+			TextView getfood_office_dialog_item_name = (TextView) convertView
+					.findViewById(R.id.getfood_office_dialog_item_name);
+			getfood_office_dialog_item_name.setText(officedata.get(position));
+			CheckBox getfood_office_dialog_item_cbox = (CheckBox) convertView
+					.findViewById(R.id.getfood_office_dialog_item_cbox);
+			getfood_office_dialog_item_cbox.setChecked(getSharedPreferences(
+					"office_select", Context.MODE_PRIVATE).getBoolean(
+					officedata.get(position), false));
+		
+			getfood_office_dialog_item_cbox
+					.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+						@Override
+						public void onCheckedChanged(CompoundButton buttonView,
+								boolean isChecked) {
+							// TODO Auto-generated method stub
+						
+							Editor editor = getSharedPreferences(
+									"office_select", Context.MODE_PRIVATE)
+									.edit();
+							editor.putBoolean(officedata.get(position),
+									isChecked);
+							editor.commit();
+						}
+					});
+			return convertView;
+
+		}
+
+	}
+
+	
+	/**
+	 * @description 合计菜品适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午5:24:04 
+	 */
+	
+	class totaladapter extends BaseAdapter{
+		ArrayList<String> msg;
+		Context context;
+		public totaladapter(ArrayList<String> msg,Context context)
+		{
+			this.msg=msg;
+			this.context=context;
+		}
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+			return msg.size();
+		}
+
+		@Override
+		public Object getItem(int position) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public long getItemId(int position) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			// TODO Auto-generated method stub
+			LinearLayout totile_layout = new LinearLayout(context);
+			totile_layout.setOrientation(LinearLayout.VERTICAL);
+			final LinearLayout sun_layout = addTotalFood(msg.get(position));
+			TextView textView=new TextView(context);
+			textView.setText(msg.get(position));
+			textView.setTextSize(25);
+			textView.setGravity(Gravity.CENTER);
+			totile_layout.addView(textView);
+			totile_layout.addView(sun_layout);
+			
+			
+			return totile_layout;
+		}
+		
+	}
+
+
+	@Override
+	public void adapterButtonClick(Button b, String buttonName, int position) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void adapterTextChanged(EditText s, String editTextName, int position) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void adapterCheckedChanged(boolean isChecked, String CheckBoxName,
+			int position) {
+		// TODO Auto-generated method stub
+		
+	}
+
+}

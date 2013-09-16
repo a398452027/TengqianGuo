@@ -1,0 +1,102 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import com.gtq.order.bean.OrderBean;
+import com.gtq.order.myinterface.AdatperFuntion;
+import com.gtq.order.view.R;
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.View.OnClickListener;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.TextView;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+
+public class OrderListAdapter_MealActivity extends BaseAdapter{
+	ArrayList<OrderBean> data;
+	Context context;
+	int read_type;
+	AdatperFuntion adatperFuntion;
+	public OrderListAdapter_MealActivity(ArrayList<OrderBean> data,Context context,int read_type
+			,AdatperFuntion adatperFuntion ) {
+		this.data = data;
+		this.context=context;
+		this.read_type=read_type;
+		this.adatperFuntion=adatperFuntion;
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return data.size();
+	}
+
+	@Override
+	public Object getItem(int arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int arg0) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(final int position, View convertView,
+			ViewGroup parent) {
+		// TODO Auto-generated method stub
+		View view = LayoutInflater.from(context).inflate(
+				R.layout.meal_user_list_item, null);
+		Button meal_user_list_edit = (Button) view
+				.findViewById(R.id.meal_user_list_edit);
+		if (read_type == 2)
+			meal_user_list_edit.setVisibility(View.GONE);
+		meal_user_list_edit.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				adatperFuntion.adapterButtonClick((Button)v, "edit", position);
+			}
+		});
+		CheckBox meal_user_list_CheckBox = (CheckBox) view
+				.findViewById(R.id.meal_user_list_CheckBox);
+		meal_user_list_CheckBox
+				.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+					@Override
+					public void onCheckedChanged(CompoundButton buttonView,
+							boolean isChecked) {
+						// TODO Auto-generated method stub
+						if (isChecked) {
+							data.get(position).setEdit(true);
+
+						}
+					}
+				});
+		TextView meal_user_list_userid = (TextView) view
+				.findViewById(R.id.meal_user_list_userid);
+		TextView meal_user_list_office = (TextView) view
+				.findViewById(R.id.meal_user_list_office);
+		TextView meal_user_list_bednumber = (TextView) view
+				.findViewById(R.id.meal_user_list_bednumber);
+	
+		TextView meal_user_list_time = (TextView) view
+				.findViewById(R.id.meal_user_list_time);
+		meal_user_list_userid.setText(data.get(position).getPatientid());
+		meal_user_list_office.setText(data.get(position).getDepid());
+		meal_user_list_bednumber.setText(data.get(position).getBednum());
+		
+		meal_user_list_time.setText(data.get(position).getDiningdate());
+		return view;
+	}
+
+}

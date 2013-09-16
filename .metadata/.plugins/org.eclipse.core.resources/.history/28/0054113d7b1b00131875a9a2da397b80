@@ -1,0 +1,44 @@
+package com.example.httpdemo;
+
+import com.xbcx.im.ui.XBaseActivity;
+
+import android.app.Activity;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+
+public class LoginActivity extends XBaseActivity implements OnClickListener{
+
+	EditText login_uidEditText;
+	EditText login_pwaEditText;
+	Button login_loginButton;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		// TODO Auto-generated method stub
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_login);
+		
+	}
+	protected void initView()
+	{
+		
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+	}
+
+	@Override
+	public void onClick(DialogInterface dialog, int which) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	
+
+}

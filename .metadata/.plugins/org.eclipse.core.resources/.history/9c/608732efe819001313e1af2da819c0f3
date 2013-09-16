@@ -1,0 +1,7 @@
+package com.gtq.order.adapter;
+
+import android.widget.BaseAdapter;
+
+public class AlreadyFoodAdapter_OrderActivity extends BaseAdapter{
+
+}

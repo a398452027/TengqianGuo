@@ -1,0 +1,72 @@
+package com.example.httpdemo;
+
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
+
+import android.content.SharedPreferences;
+
+import com.example.bean.BaseInfo;
+import com.xbcx.core.AndroidEventManager;
+import com.xbcx.core.SharedPreferenceDefine;
+import com.xbcx.core.XApplication;
+import com.xbcx.im.IMKernel;
+
+
+
+public class TestApp extends XApplication{
+	public static final String KEY_HTTP = "quyd75403l!@#~|}{][=";
+	
+	public static final String KEY_EMAIL = "email";
+	@Override
+	public void onCreate() {
+		// TODO Auto-generated method stub
+		super.onCreate();
+		initHttpRunner();
+		
+		
+		
+	}
+	private void initHttpRunner(){
+		AndroidEventManager eventManager = AndroidEventManager.getInstance();
+		eventManager.registerEventRunner(JHEventCode.HTTP_Login, new LoginRunner());
+	
+	}
+	public static String getUser(){
+		return getApplication().getSharedPreferences(SharedPreferenceDefine.SP_IM, 0)
+		.getString(KEY_EMAIL, null);
+	}
+	public static void login(String imUser,String imPwd){
+		IMKernel.getInstance().loginUserId(createLoginInfo(imUser, imPwd), true);
+	}
+	
+	public static void saveBaseInfo(BaseInfo bi){
+		final SharedPreferences sp = getApplication()
+				.getSharedPreferences(SharedPreferenceDefine.SP_IM, 0);
+		sp.edit().putString(SharedPreferenceDefine.KEY_USER, bi.getIMUser())
+		.putString(SharedPreferenceDefine.KEY_PWD,bi.getIMPwd())
+		.putString(KEY_EMAIL, bi.getUser())
+		.commit();
+		
+//		JHVCardProvider.getInstance().saveInfo(bi.getIMUser(), bi.getName(), bi.getAvatarUrl());
+		
+		FileOutputStream fos = null;
+		ObjectOutputStream oos = null;
+		try{
+			fos = getApplication().openFileOutput("login", 0);
+			oos = new ObjectOutputStream(fos);
+			oos.writeObject(bi);
+		}catch(Exception e){
+			e.printStackTrace();
+		}finally{
+			if(oos != null){
+				try{
+					oos.close();
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+
+}

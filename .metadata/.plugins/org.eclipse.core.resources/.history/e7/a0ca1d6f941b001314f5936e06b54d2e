@@ -1,0 +1,32 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.AndroidEventManager;
+import com.xbcx.core.SharedPreferenceDefine;
+import com.xbcx.core.XApplication;
+
+
+public class TestApp extends XApplication{
+	public static final String KEY_HTTP = "quyd75403l!@#~|}{][=";
+	
+	public static final String KEY_EMAIL = "email";
+	@Override
+	public void onCreate() {
+		// TODO Auto-generated method stub
+		super.onCreate();
+		initHttpRunner();
+		
+		
+		
+	}
+	private void initHttpRunner(){
+		AndroidEventManager eventManager = AndroidEventManager.getInstance();
+		eventManager.registerEventRunner(JHEventCode.HTTP_Login, new LoginRunner());
+	
+	}
+	public static String getUser(){
+		return getApplication().getSharedPreferences(SharedPreferenceDefine.SP_IM, 0)
+		.getString(KEY_EMAIL, null);
+	}
+	
+
+}

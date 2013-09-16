@@ -1,0 +1,102 @@
+package com.gtq.order.tools;
+
+import java.util.ArrayList;
+
+import android.content.Context;
+import android.content.SharedPreferences.Editor;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.db.DBAdapter;
+import com.gtq.order.view.R;
+
+public class OthersTool {
+	
+	/**
+	 * @param date
+	 * @param data
+	 * @return
+	 * @description 得到营养信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:52:17
+	 */
+	public static String getAnalysisMsg(String date, ArrayList<FoodBean> data ,DBAdapter db) {
+		ArrayList<FoodBean> search = new ArrayList<FoodBean>();
+		String analysismsg;
+
+		for (FoodBean bean : data) {
+			if (bean.getDate().equals(date)) {
+				search.add(bean);
+			}
+		}
+		analysismsg = db.getAnalysisMsg(search);
+
+		return analysismsg;
+	}
+	/**
+	 * @param dname
+	 * @return
+	 * @description 添加送餐食品信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-18 上午5:04:30
+	 */
+	LinearLayout addSendFood(String dname,Context context,String date,String mealId) {
+		LinearLayout layout = new LinearLayout(context);
+		layout.setOrientation(LinearLayout.VERTICAL);
+		// layout.setLayoutParams(new
+		// LinearLayout.LayoutParams(LayoutParams.FILL_PARENT,
+		// LayoutParams.WRAP_CONTENT));
+
+		// layout.setBackgroundColor(Color.RED);
+	
+		ArrayList<String> pid = db.getsendPid(dname, date, mealId);
+	
+		for (final String dnameAndBed : pid) {
+			
+			View view = LayoutInflater.from(this).inflate(
+					R.layout.getfood_order_item, null);
+			TextView getfood_order_item_patient = (TextView) view
+					.findViewById(R.id.getfood_order_item_patient);
+			// getfood_order_item_patient.setVisibility(View.VISIBLE);
+			getfood_order_item_patient.setText(dnameAndBed);
+			TextView getfood_order_item_food_foodmsg = (TextView) view
+					.findViewById(R.id.getfood_order_item_food_foodmsg);
+			getfood_order_item_food_foodmsg
+					.setText(db.getSendFood(dnameAndBed));
+
+			CheckBox getfood_order_item_CheckBox = (CheckBox) view
+					.findViewById(R.id.getfood_order_item_CheckBox);
+			getfood_order_item_CheckBox.setChecked(getSharedPreferences(
+					"issend", Context.MODE_PRIVATE).getBoolean(dnameAndBed,
+					false));
+			getfood_order_item_CheckBox
+					.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+						@Override
+						public void onCheckedChanged(CompoundButton buttonView,
+								boolean isChecked) {
+							// TODO Auto-generated method stub
+							Editor editor = getSharedPreferences("issend",
+									Context.MODE_PRIVATE).edit();
+							editor.putBoolean(dnameAndBed, isChecked);
+							editor.commit();
+						}
+					});
+			layout.addView(view);
+			
+		
+		}
+	
+		return layout;
+
+	}
+
+}

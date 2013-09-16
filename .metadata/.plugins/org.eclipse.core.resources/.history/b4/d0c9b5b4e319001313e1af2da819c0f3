@@ -1,0 +1,13 @@
+package com.gtq.order.myinterface;
+
+import android.widget.Button;
+import android.widget.EditText;
+
+public interface AdatperFuntion {
+	
+	public void adapterButtonClick(Button b,String buttonName);
+	public void adapterTextChanged(EditText s,String editTextName);
+	public void adapterCheckedChanged(boolean isChecked,String CheckBoxName);
+	
+
+}

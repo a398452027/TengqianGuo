@@ -1,0 +1,122 @@
+package com.gtq.order.adapter;
+
+import java.util.ArrayList;
+
+import android.content.Context;
+import android.content.SharedPreferences.Editor;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.View.OnClickListener;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.myinterface.AdatperFuntion;
+
+import com.gtq.order.view.R;
+
+public class FoodListAdapter_OrderActivity  extends BaseAdapter{
+	
+
+	Context context;
+	ArrayList<FoodBean> foodBeans;
+	AdatperFuntion adatperFuntion;
+
+	public FoodListAdapter_OrderActivity(ArrayList<FoodBean> foodBeans, Context context,	
+			AdatperFuntion adatperFuntion) {
+		this.foodBeans = foodBeans;
+		this.context = context;
+		this.adatperFuntion=adatperFuntion;
+	}
+
+	@Override
+	public int getCount() {
+		// TODO Auto-generated method stub
+		return foodBeans.size();
+	}
+
+	@Override
+	public Object getItem(int position) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public long getItemId(int position) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public View getView(final int position, View convertView,
+			ViewGroup parent) {
+		// TODO Auto-generated method stub
+		ViewHolder holder;
+		// if(convertView==null)
+		// {
+		convertView = LayoutInflater.from(context).inflate(
+				R.layout.order_user_food_item, null);
+		holder = new ViewHolder();
+		holder.select = (CheckBox) convertView
+				.findViewById(R.id.order_user_food_checkbox);
+		holder.name = (TextView) convertView
+				.findViewById(R.id.order_user_food_name);
+		holder.price = (TextView) convertView
+				.findViewById(R.id.order_user_food_price);
+		holder.details = (ImageView) convertView
+				.findViewById(R.id.order_user_food_msg);
+
+		convertView.setTag(holder);
+
+		// }
+		// else{
+		// holder = (ViewHolder)convertView.getTag();
+		// }
+		foodBeans.get(position).setIsselect(
+				context.getSharedPreferences("foodstate", 0).getBoolean(
+						foodBeans.get(position).getId(), false));
+		holder.select.setChecked(context.getSharedPreferences("foodstate", 0)
+				.getBoolean(foodBeans.get(position).getId(), false));
+		holder.select
+				.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+					@Override
+					public void onCheckedChanged(CompoundButton buttonView,
+							boolean isChecked) {
+						// TODO Auto-generated method stub
+
+						int i = position;
+						Editor editor = context.getSharedPreferences("foodstate", 0)
+								.edit();
+						editor.putBoolean(foodBeans.get(i).getId(),
+								isChecked);
+						editor.commit();
+
+					}
+				});
+		holder.name = (TextView) convertView
+				.findViewById(R.id.order_user_food_name);
+		holder.name.setText(foodBeans.get(position).getName());
+		holder.price = (TextView) convertView
+				.findViewById(R.id.order_user_food_price);
+		holder.price.setText(foodBeans.get(position).getPrice());
+		holder.details.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				adatperFuntion.adapterButtonClick((Button)v, "details",position);
+				
+			}
+		});
+
+		return convertView;
+	}
+
+}

@@ -1,0 +1,1791 @@
+package com.gtq.order.view;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.StreamCorruptedException;
+import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.zip.Inflater;
+
+import android.R.integer;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.content.AsyncQueryHandler;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.graphics.Color;
+import android.opengl.Visibility;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v4.view.PagerAdapter;
+import android.support.v4.view.ViewPager;
+import android.text.Editable;
+import android.text.Layout;
+import android.text.TextWatcher;
+import android.util.Base64;
+
+import android.view.Display;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnFocusChangeListener;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListAdapter;
+import android.widget.Toast;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
+import android.widget.SlidingDrawer;
+import android.widget.SlidingDrawer.OnDrawerCloseListener;
+import android.widget.SlidingDrawer.OnDrawerOpenListener;
+import android.widget.TextView;
+
+import com.gtq.order.bean.FoodBean;
+import com.gtq.order.bean.HisBean;
+import com.gtq.order.bean.OrderBean;
+import com.gtq.order.bean.UserBean;
+import com.gtq.order.bean.YKTBean;
+import com.gtq.order.calendar.ui.DatePopupWindow;
+import com.gtq.order.db.DBAdapter;
+import com.gtq.order.myinterface.AdatperFuntion;
+import com.gtq.order.tools.OthersTool;
+
+/**
+ * @description 订餐activity
+ * @version 1.0
+ * @author zdq
+ * @update 2013-8-10 上午1:35:30
+ */
+
+public class OrderActivity extends Activity implements OnClickListener ,AdatperFuntion{
+
+	OrderBean orderBean;
+	UserBean userBean;
+	YKTBean yktmsg;
+	HisBean hismsg;
+	DBAdapter db;
+	String oper;
+	boolean hasPatientid = false;
+	float pay_money, balance_money;
+
+	private PyQuickBar alpha;
+	EditText order_user_item_require;
+	Button order_user_item_button_analysis, order_user_open_require,
+			order_user_item_sure, order_user_classify_button,
+			order_user_item_meal, order_user_item_date,
+			order_user_item_button_mealfood, order_user_item_button_delete,
+			order_user_item_button_save;
+
+	TextView order_user_item_text_money, order_user_msg_text;
+	HorizontalListView classify;
+	SlidingDrawer slidingDrawer;
+	ListView order_analysis_listview, foodlist, already_foodlist;
+	Display display;
+	LinearLayout order_analysis_LinearLayout;
+	ArrayList<FoodBean> Fooddata;
+	ArrayList<FoodBean> alreadyfoodlist;
+	foodlistAdapter fooddataAdapter;
+	alreadyfoodlistadapter alreadyfoodlistadapter;
+	classifyAdapter classadapter;
+	Handler myHandler = new Handler() {
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see android.os.Handler#handleMessage(android.os.Message)
+		 */
+		@Override
+		public void handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			Bundle data = msg.getData();
+			String parent = data.getString("parent");
+			// 餐次回馈
+			if (parent.equals("meal")) {
+
+				orderBean.setMealsid(data.getString("value"));
+				order_user_item_meal.setText(data.getString("value"));
+			}
+			// 要求回馈
+			else if (parent.equals("require")) {
+				// if (!order_user_item_require.getText().toString().equals(""))
+				// order_user_item_require.append("+"
+				// + data.getString("value"));
+				// else
+				order_user_item_require.setText(data.getString("value"));
+
+			}
+			// 日期回馈
+			else if (parent.equals("date")) {
+				String month = String.valueOf(data.getInt("month") + 1);
+				String day = String.valueOf(data.getInt("day"));
+				if (data.getInt("month") < 10)
+					month = "0" + month;
+				if (data.getInt("day") < 10)
+					day = "0" + day;
+				orderBean.setDiningdate(data.getInt("year") + "-" + month + "-"
+						+ day);
+				order_user_item_date.setText(data.getInt("year") + "-" + month
+						+ "-" + day);
+			}
+			// 分类回馈
+			else if (parent.equals("classify")) {
+				order_user_classify_button.setText(data.getString("value"));
+				classify.setAdapter(new classifyAdapter(initclassifyList(data
+						.getString("value")), OrderActivity.this));
+				initfoodlist(Fooddata, order_user_classify_button.getText()
+						.toString());
+				fooddataAdapter.notifyDataSetChanged();
+			}
+			// 查询回馈
+			else if (parent.equals("lyz")) {
+
+				db.searchFoodByLYX(Fooddata, data.getString("value"));
+				fooddataAdapter.notifyDataSetChanged();
+
+			}
+		}
+
+	};
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		display = getWindowManager().getDefaultDisplay();
+		setContentView(R.layout.order);
+
+		db = new DBAdapter(this, 1);
+		db.open();
+		init();
+		Editor editor = getSharedPreferences("foodstate", 0).edit().clear();
+		editor.commit();
+		Intent intent = getIntent();
+		String parent = intent.getStringExtra("parent");
+
+		if (parent.equals("PatientEdit")) {
+
+			userBean = (UserBean) intent.getSerializableExtra("PatientMsg");
+			if (userBean.getId() != null)
+				hasPatientid = true;
+			if (intent.getBooleanExtra("hasPatient", false))
+				order_user_msg_text.setText("病员姓名：" + userBean.getName()
+						+ " 科室:" + userBean.getDepnmae() + " 病床号:"
+						+ userBean.getPatientBedCode());
+			else
+				order_user_msg_text.setText("病员姓名：   " + " 科室:"
+						+ userBean.getDepnmae() + " 病床号:"
+						+ userBean.getPatientBedCode());
+			orderBean.setPatientid(userBean.getId());
+			orderBean.setPatientname(userBean.getName());
+			orderBean.setDepid(userBean.getPatientDdepartmentCode());
+			orderBean.setBednum(userBean.getPatientBedCode());
+
+		} else if (parent.equals("meal")) {
+
+			orderBean = initorderid(intent.getStringExtra("orderid"));
+			if (orderBean.getPatientid() != null)
+				hasPatientid = true;
+			if (orderBean.getPatientMSG() != null)
+				userBean = orderBean.getPatientMSG();
+			if (orderBean.getPatientid() != null)
+				hasPatientid = true;
+
+			for (FoodBean readyfoodBean : orderBean.getOrderfoodsMSG()) {
+				alreadyfoodlist.add(readyfoodBean);
+			}
+
+			alreadyfoodlistadapter.notifyDataSetChanged();
+			sortOrderFoodlist();
+			order_user_item_meal.setText(orderBean.getMealsid());
+			order_user_item_date.setText(orderBean.getDiningdate());
+			if (orderBean.getPatientname() == null)
+				order_user_msg_text.setText("病员姓名：   " + " 科室:"
+						+ getDnameByid(orderBean.getDepid()) + " 病床:"
+						+ orderBean.getBednum());
+			else
+				order_user_msg_text.setText("病员姓名："
+						+ orderBean.getPatientname() + " 科室:"
+						+ getDnameByid(orderBean.getDepid()) + " 病床:"
+						+ orderBean.getBednum());
+
+		}
+
+	}
+
+	@Override
+	protected void onRestart() {
+		// TODO Auto-generated method stub
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+		super.onRestart();
+	}
+
+	@Override
+	protected void onStart() {
+		// TODO Auto-generated method stub
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+		super.onStart();
+	}
+
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		if (db != null)
+
+			db.close();
+		db = null;
+
+		super.onPause();
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		if (db != null)
+			db.close();
+		db = null;
+		super.onDestroy();
+	}
+
+	/**
+	 * @param did
+	 * @return
+	 * @description 通过ID得到科室名
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:39:06
+	 */
+	String getDnameByid(String did) {
+
+		String name = db.getDepbyDid(did);
+
+		return name;
+	}
+
+	/**
+	 * @param orderId
+	 * @return
+	 * @description 初始化OrderBean
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:39:30
+	 */
+	OrderBean initorderid(String orderId) {
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+		OrderBean orderBean = db.searchOrderById(orderId);
+
+		return orderBean;
+	}
+
+	/**
+	 * @param arrayList
+	 * @description 初始化餐次表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:40:10
+	 */
+	void initmealList(ArrayList<String> arrayList) {
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+		db.initMealList(arrayList);
+
+	}
+
+	/**
+	 * @param arrayList
+	 * @description 初始化要求表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:41:02
+	 */
+	void initrequireList(ArrayList<String> arrayList) {
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+		String req = db.getSysSetting("foodreq");
+		String[] reqs = req.split(",");
+		for (int i = 0; i < reqs.length; i++) {
+			arrayList.add(reqs[i]);
+		}
+
+	}
+
+	/**
+	 * @param classtypeName
+	 * @return
+	 * @description 初始化分类表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:42:07
+	 */
+	ArrayList<String> initclassifyList(String classtypeName) {
+
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+		ArrayList<String> re = db.getclassify(classtypeName);
+
+		return re;
+
+	}
+
+	/**
+	 * @param data
+	 * @description 初始化食物列表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:42:26
+	 */
+	void initfoodlist(ArrayList<FoodBean> data, String type) {
+		if (db == null) {
+			db = new DBAdapter(this, 1);
+			db.open();
+		}
+
+		db.initFoodlist(data, type);
+
+	}
+
+	/**
+	 * 
+	 * @description 初始化界面
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:42:52
+	 */
+	void init() {
+		alpha = (PyQuickBar) findViewById(R.id.order_user_LYZ);
+		TextView textView = (TextView) findViewById(R.id.fast_position);
+		alpha.init(this, textView);
+
+		oper = getSharedPreferences("opermsg", Context.MODE_PRIVATE).getString(
+				"oper", null);
+
+		order_user_item_button_analysis = (Button) findViewById(R.id.order_user_item_button_analysis);
+		order_user_item_button_analysis.setOnClickListener(this);
+		order_user_item_sure = (Button) findViewById(R.id.order_user_item_sure);
+		order_user_item_sure.setOnClickListener(this);
+		order_user_open_require = (Button) findViewById(R.id.order_user_open_require);
+		order_user_open_require.setOnClickListener(this);
+
+		order_user_classify_button = (Button) findViewById(R.id.order_user_classify_button);
+		order_user_classify_button.setText("普食");
+		order_user_classify_button.setOnClickListener(this);
+		order_user_item_button_delete = (Button) findViewById(R.id.order_user_item_button_delete);
+		order_user_item_button_delete.setOnClickListener(this);
+		order_user_item_button_mealfood = (Button) findViewById(R.id.order_user_item_button_mealfood);
+		order_user_item_button_mealfood.setOnClickListener(this);
+
+		order_user_msg_text = (TextView) findViewById(R.id.order_user_msg_text);
+		order_user_item_text_money = (TextView) findViewById(R.id.order_user_item_text_money);
+		order_user_item_button_save = (Button) findViewById(R.id.order_user_item_button_save);
+		order_user_item_button_save.setOnClickListener(this);
+
+		slidingDrawer = (SlidingDrawer) findViewById(R.id.order_user_slidingdrawer);
+		slidingDrawer.setOnDrawerOpenListener(new OnDrawerOpenListener() {
+
+			@Override
+			public void onDrawerOpened() {
+				// TODO Auto-generated method stub
+				pay_money = 0;
+				for (int i = 0; i < alreadyfoodlist.size(); i++) {
+
+					pay_money = pay_money
+							+ Float.valueOf(alreadyfoodlist.get(i).getPrice())
+							* Integer
+									.valueOf(alreadyfoodlist.get(i).getCount());
+
+				}
+				order_user_item_text_money.setText("总金额："
+						+ String.valueOf(pay_money));
+			}
+		});
+		already_foodlist = (ListView) findViewById(R.id.order_user_already_foodlist);
+		alreadyfoodlist = new ArrayList<FoodBean>();
+		alreadyfoodlistadapter = new alreadyfoodlistadapter(alreadyfoodlist,
+				this);
+		already_foodlist.setAdapter(alreadyfoodlistadapter);
+		sortOrderFoodlist();
+
+		Fooddata = new ArrayList<FoodBean>();
+		initfoodlist(Fooddata, order_user_classify_button.getText().toString());
+		foodlist = (ListView) findViewById(R.id.order_user_foods_listview);
+		fooddataAdapter = new foodlistAdapter(Fooddata, this);
+		foodlist.setAdapter(fooddataAdapter);
+
+		classify = (HorizontalListView) findViewById(R.id.order_user_classify_HorizontalListView);
+		classadapter = new classifyAdapter(
+				initclassifyList(order_user_classify_button.getText()
+						.toString()), this);
+		classify.setAdapter(classadapter);
+
+		order_user_item_date = (Button) findViewById(R.id.order_user_item_date);
+		// ʱ����
+		Calendar cal = Calendar.getInstance();
+		String month = String.valueOf((cal.get(Calendar.MONTH) + 1));
+		String day = String.valueOf(cal.get(Calendar.DAY_OF_MONTH));
+		if ((cal.get(Calendar.MONTH) + 1) < 10)
+			month = "0" + month;
+		if (cal.get(Calendar.DAY_OF_MONTH) < 10)
+			day = "0" + day;
+		order_user_item_date.setText(cal.get(Calendar.YEAR) + "-" + month + "-"
+				+ day);
+
+		// ���ó�ʼ�Ͳ�ʱ��
+		orderBean = new OrderBean();
+		orderBean.setDiningdate(cal.get(Calendar.YEAR) + "/"
+				+ (cal.get(Calendar.MONTH) + 1) + "/"
+				+ cal.get(Calendar.DAY_OF_MONTH));
+		order_user_item_date.setOnClickListener(this);
+		order_user_item_meal = (Button) findViewById(R.id.order_user_item_meal);
+		order_user_item_meal.setOnClickListener(this);
+
+		// order_user_item_foodname = (EditText)
+		// findViewById(R.id.order_user_item_foodname);
+		order_user_item_require = (EditText) findViewById(R.id.order_user_item_require);
+		order_user_item_require
+				.setOnFocusChangeListener(new OnFocusChangeListener() {
+
+					@Override
+					public void onFocusChange(View v, boolean hasFocus) {
+						// TODO Auto-generated method stub
+
+					}
+				});
+
+	}
+
+	/**
+	 * @param typename
+	 * @param totalType
+	 * @description 通过类型改变食物列表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:44:51
+	 */
+	void changeFoodByType(String typename, String totalType) {
+
+		db.changeFoodByType(Fooddata, totalType, typename);
+
+		fooddataAdapter.notifyDataSetChanged();
+	}
+
+	
+	/* (non-Javadoc)
+	 * @see android.app.Activity#onWindowFocusChanged(boolean)
+	 */
+	public void onWindowFocusChanged(boolean hasFocus) {
+		// TODO Auto-generated method stub
+		super.onWindowFocusChanged(hasFocus);
+		alpha.setHight(alpha.getHeight());
+		alpha.setHandler(myHandler);
+	}
+
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+
+		// 点击日期
+		if (v == order_user_item_date) {
+
+			DatePopupWindow datePopupWindow = new DatePopupWindow(
+					OrderActivity.this, display.getWidth(),
+					order_user_item_date.getWidth(), getLayoutInflater(),
+					myHandler);
+			datePopupWindow.showAsDropDown(order_user_item_date, 0, -5);
+		}
+		// 点击餐次
+		else if (v == order_user_item_meal) {
+			ArrayList<String> arrayList = new ArrayList<String>();
+			initmealList(arrayList);
+			MyPopWindow myPopWindow = new MyPopWindow(OrderActivity.this,
+					new ListView(OrderActivity.this), arrayList,
+					order_user_item_meal.getWidth(), myHandler, "meal");
+
+			myPopWindow.showAsDropDown(order_user_item_meal, 0, -5);
+		}
+		// 点击订餐
+		else if (v == order_user_item_button_mealfood) {
+
+			if (alreadyfoodlist.size() != 0) {
+				if (timeremind(order_user_item_meal.getText().toString(),
+						order_user_item_date.getText().toString())) {
+					showRemindDialog();
+				} else
+					mealfoodonclick();
+			} else
+				Toast.makeText(OrderActivity.this, "没有点餐", Toast.LENGTH_LONG)
+						.show();
+
+		}
+		// 点击保存
+		else if (v == order_user_item_button_save) {
+			if (!order_user_item_meal.getText().toString().equals("")) {
+				if (alreadyfoodlist.size() != 0) {
+					saveOrder(3);
+					onBackPressed();
+					Toast.makeText(OrderActivity.this, "保存成功",
+							Toast.LENGTH_LONG).show();
+				} else
+					Toast.makeText(OrderActivity.this, "未有点餐",
+							Toast.LENGTH_LONG).show();
+			} else
+				Toast.makeText(OrderActivity.this, "请选择餐次", Toast.LENGTH_LONG)
+						.show();
+		}
+		// 点击删除
+		else if (v == order_user_item_button_delete) {
+			float money = 0.0f;
+			ArrayList<FoodBean> bufferArrayList = new ArrayList<FoodBean>();
+			for (int i = 0; i < alreadyfoodlist.size(); i++) {
+				if (alreadyfoodlist.get(i).isEdit()) {
+					bufferArrayList.add(alreadyfoodlist.get(i));
+
+				}
+
+			}
+			alreadyfoodlist.removeAll(bufferArrayList);
+			alreadyfoodlistadapter.notifyDataSetChanged();
+			sortOrderFoodlist();
+			for (int i = 0; i < alreadyfoodlist.size(); i++) {
+				money = money
+						+ Float.valueOf(alreadyfoodlist.get(i).getPrice());
+			}
+			order_user_item_text_money.setText("总金额：" + String.valueOf(money));
+		}
+		// 点击分类
+		else if (v == order_user_classify_button) {
+
+			ArrayList<String> arrayList = new ArrayList<String>();
+			arrayList.add("普食");
+			arrayList.add("治疗食谱");
+
+			MyPopWindow myPopWindow = new MyPopWindow(OrderActivity.this,
+					new ListView(OrderActivity.this), arrayList,
+					order_user_classify_button.getWidth(), myHandler,
+					"classify");
+
+			myPopWindow.showAsDropDown(order_user_classify_button, 0, -5);
+		}
+		// 点击确定
+		else if (v == order_user_item_sure) {
+			if (!order_user_item_meal.getText().toString().equals("")) {
+				initfoodlist(Fooddata, "全部");
+				for (int i = 0; i < Fooddata.size(); i++) {
+					if (getSharedPreferences("foodstate", 0).getBoolean(
+							Fooddata.get(i).getId(), false)) {
+
+						Fooddata.get(i).setMealTimes(
+								order_user_item_meal.getText().toString());
+						Fooddata.get(i).setDate(
+								order_user_item_date.getText().toString());
+						Fooddata.get(i).setMealTimes(
+								order_user_item_meal.getText().toString());
+						Fooddata.get(i).setMealseq(
+								db.getmealseq(order_user_item_meal.getText()
+										.toString()));
+						Fooddata.get(i).setDate(
+								order_user_item_date.getText().toString());
+						Fooddata.get(i).setFoodRequire(
+								order_user_item_require.getText().toString());
+						Fooddata.get(i).setCount("1");
+						alreadyfoodlist.add(Fooddata.get(i));
+						pay_money = pay_money
+								+ Float.valueOf(Fooddata.get(i).getPrice());
+					}
+				}
+				fooddataAdapter.notifyDataSetChanged();
+				Editor editor = getSharedPreferences("foodstate", 0).edit()
+						.clear();
+				editor.commit();
+				order_user_item_text_money.setText("总金额："
+						+ String.valueOf(pay_money));
+				alreadyfoodlistadapter.notifyDataSetChanged();
+				sortOrderFoodlist();
+			} else {
+				Toast.makeText(OrderActivity.this, "请选择餐次...",
+						Toast.LENGTH_LONG).show();
+			}
+		}
+		// 点击要求
+		else if (v == order_user_open_require) {
+			ArrayList<String> arrayList = new ArrayList<String>();
+			initrequireList(arrayList);
+			MyPopWindow myPopWindow = new MyPopWindow(OrderActivity.this,
+					new ListView(OrderActivity.this), arrayList,
+					order_user_item_require.getWidth(), myHandler, "require");
+
+			myPopWindow.showAsDropDown(order_user_item_require, 0, -5);
+
+		}
+		// 营养分析
+		else if (v == order_user_item_button_analysis) {
+			AlertDialog alertDialog = showAnalysisDialog();
+
+			alertDialog.show();
+		}
+
+	}
+
+	/**
+	 * @return
+	 * @description 营养分析对话框
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:50:06
+	 */
+	AlertDialog showAnalysisDialog() {
+		View dialogview = getLayoutInflater().from(this).inflate(
+				R.layout.analysis_dialog, null);
+		order_analysis_listview = (ListView) dialogview
+				.findViewById(R.id.order_analysis_listview);
+		order_analysis_listview
+				.setAdapter(new AnalysisAdapter(alreadyfoodlist));
+		AlertDialog.Builder builder = new Builder(this);
+		builder.setTitle("营养分析");
+		builder.setView(dialogview);
+		builder.setNegativeButton("关闭", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+
+			}
+		});
+
+		return builder.create();
+	}
+
+	/**
+	 * @param bean
+	 * @return
+	 * @description 菜品详细对话框
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:50:17
+	 */
+	AlertDialog showFoodDetailDialog(FoodBean bean) {
+		ArrayList<View> list = new ArrayList<View>();
+		View dialogview = getLayoutInflater().from(this).inflate(
+				R.layout.food_msg_dialog, null);
+		ViewPager food_msg_viewpager = (ViewPager) dialogview
+				.findViewById(R.id.food_msg_viewpager);
+		initfoodDetailList(list, bean);
+		food_msg_viewpager.setAdapter(new MyViewPagerAdapter(list));
+		AlertDialog.Builder builder = new Builder(this);
+		builder.setTitle(bean.getName());
+		builder.setView(dialogview);
+		builder.setNegativeButton("关闭", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+
+			}
+		});
+
+		return builder.create();
+	}
+
+	/**
+	 * @param list
+	 * @param bean
+	 * @description 初始化详细菜品View
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:50:38
+	 */
+	void initfoodDetailList(ArrayList<View> list, FoodBean bean) {
+		ArrayList<FoodBean> beans = new ArrayList<FoodBean>();
+		beans.add(bean);
+
+		String msg = db.getAnalysisMsg(beans);
+		String detail = db.getDetailfood(bean);
+
+		LayoutInflater lf = getLayoutInflater().from(this);
+		View view = lf.inflate(R.layout.food_image_view, null);
+		ImageView imageView = (ImageView) view
+				.findViewById(R.id.food_image_view);
+		imageView.setBackgroundResource(R.drawable.ic_launcher);
+
+		list.add(view);
+		TextView textView = new TextView(this);
+		textView.setText(msg);
+		list.add(textView);
+
+		TextView textView3 = new TextView(this);
+		textView3.setText(detail);
+		list.add(textView3);
+	}
+
+	
+	/**
+	 * @param date
+	 * @param data
+	 * @return
+	 * @description 得到营养信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:52:17
+	 */
+	String getAnalysisMsg(String date, ArrayList<FoodBean> data) {
+		ArrayList<FoodBean> search = new ArrayList<FoodBean>();
+		String analysismsg;
+
+		for (FoodBean bean : data) {
+			if (bean.getDate().equals(date)) {
+				search.add(bean);
+			}
+		}
+		analysismsg = db.getAnalysisMsg(search);
+
+		return analysismsg;
+	}
+
+	/**
+	 * 
+	 * @description 过期提醒对话框
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:52:31
+	 */
+	void showRemindDialog() {
+		AlertDialog.Builder builder = new Builder(this);
+		builder.setTitle("餐次过期");
+		builder.setMessage("您点的餐次已过期,是否继续订餐？");
+		builder.setPositiveButton("继续", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+				mealfoodonclick();
+			}
+		});
+		builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// TODO Auto-generated method stub
+
+			}
+		});
+		builder.create().show();
+
+	}
+
+	/**
+	 * @param paramkeys
+	 * @return
+	 * @description 得到可选支付类型
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:53:41
+	 */
+	String getAvailablePayType(String paramkeys) {
+
+		String re = db.getSysSetting(paramkeys);
+
+		return re;
+	}
+
+	/**
+	 * @param mealname
+	 * @param date
+	 * @return
+	 * @description 判断是否过期
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:54:07
+	 */
+	boolean timeremind(String mealname, String date) {
+
+		boolean re = db.timeremind(mealname, date);
+
+		return re;
+
+	}
+
+	/**
+	 * @param logname
+	 * @param oid
+	 * @return
+	 * @description 得到支付类型
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:54:23
+	 */
+	HashMap<String, String> getPaylog(String logname, String oid) {
+
+		HashMap<String, String> map = db.getPaylog(logname, oid);
+
+		return map;
+	}
+
+	/**
+	 * 
+	 * @description 订餐点击
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:55:18
+	 */
+	void mealfoodonclick() {
+
+		final ArrayList<Integer> types = new ArrayList<Integer>();
+		types.add(Integer.valueOf(1));
+
+		final View dialogview = getLayoutInflater().inflate(
+				R.layout.mealfood_dialog, null);
+		TextView mealfood_dialog_money = (TextView) dialogview
+				.findViewById(R.id.mealfood_dialog_money);
+
+		mealfood_dialog_money.setText("点餐金额:" + String.valueOf(pay_money));
+		final TextView yktbalancepro = (TextView) dialogview
+				.findViewById(R.id.YKT_check_sys_yktbalancepro);
+		final TextView his_check_sys_balancepro = (TextView) dialogview
+				.findViewById(R.id.his_check_sys_balancepro);
+		final EditText hospital_check_sys_id = (EditText) dialogview
+				.findViewById(R.id.hospital_check_sys_id);
+		hospital_check_sys_id.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before,
+					int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count,
+					int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				// TODO Auto-generated method stub
+				if (!hospital_check_sys_id.getText().toString().equals("")) {
+					if (check_pay_type(2, hospital_check_sys_id.getText()
+							.toString(), null)) {
+						his_check_sys_balancepro.setText("姓名："
+								+ hismsg.getPatientname() + "   可用余额："
+								+ hismsg.getHisbalpre());
+
+						balance_money = Float.valueOf(hismsg.getHisbalpre());
+						if (balance_money > pay_money)
+
+							his_check_sys_balancepro.setTextColor(Color.BLACK);
+						else
+							his_check_sys_balancepro.setTextColor(Color.RED);
+					}
+
+					else
+						his_check_sys_balancepro.setText("没有此卡信息");
+
+				}
+			}
+		});
+
+		final EditText YKT_check_sys_accid = (EditText) dialogview
+				.findViewById(R.id.YKT_check_sys_accid);
+
+		final EditText YKT_check_sys_certid = (EditText) dialogview
+				.findViewById(R.id.YKT_check_sys_certid);
+
+		YKT_check_sys_certid.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before,
+					int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count,
+					int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				// TODO Auto-generated method stub
+				if (YKT_check_sys_certid.getText().toString().length() != 0
+						&& YKT_check_sys_accid.getText().toString().length() != 0) {
+
+					if (check_pay_type(1, YKT_check_sys_accid.getText()
+							.toString(), YKT_check_sys_certid.getText()
+							.toString())) {
+						balance_money = Float.valueOf(yktmsg.getYktbalpro());
+						if (balance_money > pay_money)
+
+							yktbalancepro.setTextColor(Color.BLACK);
+						else
+							yktbalancepro.setTextColor(Color.RED);
+						yktbalancepro.setText("姓名：" + yktmsg.getYktname()
+								+ "   可用余额：" + yktmsg.getYktbalpro() + "\n状态："
+								+ yktmsg.getStatename());
+
+						String isok = db.getSysSetting("yktusedstateid");
+						if (!yktmsg.getState().equals(isok)) {
+							yktbalancepro.setTextColor(Color.RED);
+						}
+
+					} else
+						yktbalancepro.setText("没有此卡信息");
+				}
+			}
+		});
+		if (orderBean.getOrderid() != null) {
+			HashMap<String, String> log = getPaylog("ykt",
+					orderBean.getOrderid());
+			if (log.size() == 2) {
+				YKT_check_sys_accid.setText(log.get("acc"));
+				YKT_check_sys_certid.setText(log.get("cert"));
+			}
+		}
+
+		final LinearLayout pay_type_layout_1 = (LinearLayout) dialogview
+				.findViewById(R.id.pay_type_layout_1);
+		final LinearLayout pay_type_layout_2 = (LinearLayout) dialogview
+				.findViewById(R.id.pay_type_layout_2);
+
+		final TextView pay_type_text_1 = (TextView) dialogview
+				.findViewById(R.id.pay_type_textview_1);
+		if (getAvailablePayType("ifyktpay").equals("0")) {
+			pay_type_text_1.setVisibility(View.GONE);
+		}
+		final TextView pay_type_text_2 = (TextView) dialogview
+				.findViewById(R.id.pay_type_textview_2);
+		if (getAvailablePayType("ifhispay").equals("0")) {
+			pay_type_text_2.setVisibility(View.GONE);
+		}
+		final TextView pay_type_text_3 = (TextView) dialogview
+				.findViewById(R.id.pay_type_textview_3);
+		if (getAvailablePayType("ifcashpay").equals("0")) {
+			pay_type_text_3.setVisibility(View.GONE);
+		}
+		pay_type_text_1.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				types.add(Integer.valueOf(1));
+				v.setBackgroundColor(0xff808080);
+				pay_type_text_2.setBackgroundColor(0xffffffff);
+				pay_type_text_3.setBackgroundColor(0xffffffff);
+				pay_type_layout_1.setVisibility(View.VISIBLE);
+				pay_type_layout_2.setVisibility(View.GONE);
+			}
+		});
+		pay_type_text_2.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				types.add(Integer.valueOf(2));
+				v.setBackgroundColor(0xff808080);
+				pay_type_text_1.setBackgroundColor(0xffffffff);
+				pay_type_text_3.setBackgroundColor(0xffffffff);
+				pay_type_layout_2.setVisibility(View.VISIBLE);
+				pay_type_layout_1.setVisibility(View.GONE);
+			}
+		});
+		if (hasPatientid) {
+			types.add(Integer.valueOf(2));
+			pay_type_text_2.setBackgroundColor(0xff808080);
+			pay_type_text_1.setBackgroundColor(0xffffffff);
+			pay_type_text_3.setBackgroundColor(0xffffffff);
+			pay_type_layout_2.setVisibility(View.VISIBLE);
+			pay_type_layout_1.setVisibility(View.GONE);
+			if (userBean.getId() != null)
+				hospital_check_sys_id.setText(userBean.getId());
+			else
+				hospital_check_sys_id.setText(orderBean.getPatientid());
+
+			if (check_pay_type(2, hospital_check_sys_id.getText().toString(),
+					null))
+				his_check_sys_balancepro.setText("姓名："
+						+ hismsg.getPatientname() + "   可用余额："
+						+ hismsg.getHisbalpre());
+			else
+				his_check_sys_balancepro.setText("没有此卡信息");
+
+		}
+
+		Builder builder = new Builder(OrderActivity.this);
+		builder.setTitle("订餐");
+		builder.setView(dialogview);
+
+		builder.setPositiveButton(android.R.string.ok,
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						// TODO Auto-generated method stub
+						if (types.get(types.size() - 1) == 1) {
+							if (balance_money > pay_money) {
+
+								String isOk = db
+										.getSysSetting("yktusedstateid");
+
+								if (yktmsg.getState().equals(isOk)) {
+									Toast.makeText(OrderActivity.this, "订餐成功",
+											Toast.LENGTH_LONG).show();
+									yktmsg.setYktbalpro(String
+											.valueOf(balance_money));
+									yktmsg.setTransamt(String
+											.valueOf(0 - pay_money));
+									yktmsg.setYktbalnext(String
+											.valueOf(balance_money - pay_money));
+									saveOrder(1);
+
+									OrderActivity.this.onBackPressed();
+								} else {
+									Toast.makeText(OrderActivity.this,
+											yktmsg.getStatename(),
+											Toast.LENGTH_LONG).show();
+								}
+							} else {
+								Toast.makeText(OrderActivity.this, "余额不足.",
+										Toast.LENGTH_LONG).show();
+							}
+						} else if (types.get(types.size() - 1) == 2) {
+							if (check_pay_type(types.get(types.size() - 1),
+									hospital_check_sys_id.getText().toString(),
+									"")) {
+								hismsg.setHisbalnext(String
+										.valueOf(balance_money - pay_money));
+								hismsg.setHisbalpre(String
+										.valueOf(balance_money));
+								hismsg.setTransamt(String
+										.valueOf(0 - pay_money));
+								saveOrder(2);
+								OrderActivity.this.onBackPressed();
+							} else {
+
+							}
+						}
+					}
+				});
+		builder.setNegativeButton(android.R.string.cancel,
+				new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.cancel();
+					}
+				});
+		builder.create().setCanceledOnTouchOutside(false);
+		builder.show();
+	}
+
+	/**
+	 * @param type
+	 * @param accidOrPid
+	 * @param certid
+	 * @return
+	 * @description 判断是否有此卡信息
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:58:16
+	 */
+	boolean check_pay_type(int type, String accidOrPid, String certid) {
+		if (type == 1) {
+
+			yktmsg = db.cheakYKTid(accidOrPid, certid);
+
+			if (yktmsg != null)
+				return true;
+			return false;
+
+		} else if (type == 2) {
+
+			hismsg = db.getHisMoney(accidOrPid);
+
+			if (hismsg != null)
+
+				return true;
+			return false;
+
+		}
+		return true;
+	}
+
+	/**
+	 * 
+	 * @description 排序已点列表
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-24 下午8:28:20
+	 */
+	public void sortOrderFoodlist() {
+		Collections.sort(alreadyfoodlist, new Comparator<FoodBean>() {
+
+			@Override
+			public int compare(FoodBean arg0, FoodBean arg1) {
+				// TODO Auto-generated method stub
+				SimpleDateFormat s = new SimpleDateFormat("yyyy-MM-dd");
+				long t;
+				try {
+					t = s.parse(arg0.getDate()).getTime();
+					Date d0 = new Date(t);
+					t = s.parse(arg1.getDate()).getTime();
+					Date d1 = new Date(t);
+					if (d0.compareTo(d1) != 0)
+						return d0.compareTo(d1);
+					else {
+						if (Integer.valueOf(arg0.getMealseq()) >= Integer
+								.valueOf(arg1.getMealseq()))
+							return 1;
+						else
+							return -0;
+					}
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				return 0;
+			}
+
+		});
+	}
+
+	/**
+	 * @param savetype
+	 * @return
+	 * @description 保存订餐
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:58:40
+	 */
+	boolean saveOrder(int savetype) {
+
+		ArrayList<OrderBean> delete = new ArrayList<OrderBean>();
+		delete.add(orderBean);
+		db.deleteOrder(delete);
+		if (orderBean.getOrderid() == null) {
+			String orderId = db.getNewOrderId();
+			orderBean.setOrderid(orderId);
+		}
+		orderBean.setOperid(oper);
+		if (userBean != null) {
+			orderBean.setPatientMSG(userBean);
+			orderBean.setPatientid(userBean.getId());
+			orderBean.setPatientname(userBean.getName());
+
+		}
+		if (savetype == 1) {
+			yktmsg.setYktoper(oper);
+			yktmsg.setTradesouckey(orderBean.getOrderid());
+			orderBean.setYktMSG(yktmsg);
+			orderBean.setPaytype("2");
+			orderBean.setPayaccount(yktmsg.getYktaccoutno());
+		} else if (savetype == 2) {
+			hismsg.setHisoper(oper);
+			hismsg.setTradesouckey(orderBean.getOrderid());
+			orderBean.setPaytype("1");
+			orderBean.setHisBean(hismsg);
+			orderBean.setPayaccount(hismsg.getPatientid());
+		} else if (savetype == 3) {
+			orderBean.setPaytype("0");
+		}
+		if (savetype != 3)
+			orderBean.setState("1");
+		else
+			orderBean.setState("3");
+		orderBean.setOrderfoodsMSG(alreadyfoodlist);
+		orderBean.setTotalamt(String.valueOf(pay_money));
+
+		db.saveOrderMSG(orderBean);
+
+		return true;
+	}
+	/**
+	 * @description
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:51:15
+	 */
+
+	static class ViewHolder {
+		CheckBox select;
+		TextView name;
+		TextView price;
+		ImageView details;
+
+	}
+
+	/**
+	 * @description 详细适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:51:32
+	 */
+
+	class MyViewPagerAdapter extends PagerAdapter {
+
+		/**
+		 * @fields mListViews
+		 */
+		ArrayList<View> mListViews;
+
+		public MyViewPagerAdapter(ArrayList<View> mListViews) {
+			this.mListViews = mListViews;
+		}
+
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+			return mListViews.size();
+		}
+
+		@Override
+		public boolean isViewFromObject(View arg0, Object arg1) {
+			// TODO Auto-generated method stub
+			return arg0 == arg1;
+		}
+
+		@Override
+		public Object instantiateItem(ViewGroup container, int position) {
+			// TODO Auto-generated method stub
+			container.addView(mListViews.get(position));
+
+			return mListViews.get(position);
+		}
+
+		@Override
+		public void destroyItem(ViewGroup container, int position, Object object) {
+			// TODO Auto-generated method stub
+			container.removeView(mListViews.get(position));
+		}
+
+	}
+
+	/**
+	 * @description 食品适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:51:50
+	 */
+
+	class foodlistAdapter extends BaseAdapter {
+
+		Context context;
+		ArrayList<FoodBean> foodBeans;
+
+		public foodlistAdapter(ArrayList<FoodBean> foodBeans, Context context) {
+			this.foodBeans = foodBeans;
+			this.context = context;
+		}
+
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+			return foodBeans.size();
+		}
+
+		@Override
+		public Object getItem(int position) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public long getItemId(int position) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public View getView(final int position, View convertView,
+				ViewGroup parent) {
+			// TODO Auto-generated method stub
+			ViewHolder holder;
+			// if(convertView==null)
+			// {
+			convertView = LayoutInflater.from(context).inflate(
+					R.layout.order_user_food_item, null);
+			holder = new ViewHolder();
+			holder.select = (CheckBox) convertView
+					.findViewById(R.id.order_user_food_checkbox);
+			holder.name = (TextView) convertView
+					.findViewById(R.id.order_user_food_name);
+			holder.price = (TextView) convertView
+					.findViewById(R.id.order_user_food_price);
+			holder.details = (ImageView) convertView
+					.findViewById(R.id.order_user_food_msg);
+
+			convertView.setTag(holder);
+
+			// }
+			// else{
+			// holder = (ViewHolder)convertView.getTag();
+			// }
+			foodBeans.get(position).setIsselect(
+					getSharedPreferences("foodstate", 0).getBoolean(
+							foodBeans.get(position).getId(), false));
+			holder.select.setChecked(getSharedPreferences("foodstate", 0)
+					.getBoolean(foodBeans.get(position).getId(), false));
+			holder.select
+					.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+						@Override
+						public void onCheckedChanged(CompoundButton buttonView,
+								boolean isChecked) {
+							// TODO Auto-generated method stub
+
+							int i = position;
+							Editor editor = getSharedPreferences("foodstate", 0)
+									.edit();
+							editor.putBoolean(foodBeans.get(i).getId(),
+									isChecked);
+							editor.commit();
+
+						}
+					});
+			holder.name = (TextView) convertView
+					.findViewById(R.id.order_user_food_name);
+			holder.name.setText(foodBeans.get(position).getName());
+			holder.price = (TextView) convertView
+					.findViewById(R.id.order_user_food_price);
+			holder.price.setText(foodBeans.get(position).getPrice());
+			holder.details.setOnClickListener(new OnClickListener() {
+
+				@Override
+				public void onClick(View v) {
+					// TODO Auto-generated method stub
+					AlertDialog alertDialog = showFoodDetailDialog(foodBeans
+							.get(position));
+					alertDialog.show();
+				}
+			});
+
+			return convertView;
+		}
+
+	}
+
+	/**
+	 * @description 营养分析适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:52:04
+	 */
+
+	class AnalysisAdapter extends BaseAdapter {
+		ArrayList<FoodBean> data;
+		ArrayList<String> dates = new ArrayList<String>();
+
+		public AnalysisAdapter(ArrayList<FoodBean> data) {
+			// TODO Auto-generated constructor stub
+			this.data = data;
+		}
+
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+
+			for (FoodBean bean : data) {
+				if (dates.size() == 0)
+					dates.add(bean.getDate());
+				else {
+					for (int i = 0; i < dates.size(); i++) {
+						if (dates.get(i).equals(bean.getDate()))
+							break;
+						if (i == dates.size() - 1) {
+							dates.add(bean.getDate());
+							break;
+						}
+					}
+				}
+			}
+			return dates.size();
+		}
+
+		@Override
+		public Object getItem(int arg0) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public long getItemId(int arg0) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public View getView(int arg0, View arg1, ViewGroup arg2) {
+			// TODO Auto-generated method stub
+			arg1 = getLayoutInflater().from(OrderActivity.this).inflate(
+					R.layout.order_analysis_listview_item, null);
+			Button order_analysis_item_data_button = (Button) arg1
+					.findViewById(R.id.order_analysis_item_data_button);
+			final TextView order_analysis_item_msg = (TextView) arg1
+					.findViewById(R.id.order_analysis_item_msg);
+			order_analysis_item_data_button.setText(dates.get(arg0));
+			order_analysis_item_data_button
+					.setOnClickListener(new OnClickListener() {
+
+						@Override
+						public void onClick(View v) {
+							// TODO Auto-generated method stub
+							if (order_analysis_item_msg.getVisibility() == View.GONE) {
+								order_analysis_item_msg
+										.setVisibility(View.VISIBLE);
+							} else
+								order_analysis_item_msg
+										.setVisibility(View.GONE);
+							;
+						}
+					});
+			order_analysis_item_msg.setText(OthersTool.getAnalysisMsg(dates.get(arg0),
+					data, db));
+
+			return arg1;
+		}
+
+	}
+
+	/**
+	 * @description 分类适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:44:32
+	 */
+	
+	class classifyAdapter extends BaseAdapter {
+	
+		Context context;
+		ArrayList<String> datas;
+	
+		public classifyAdapter(ArrayList<String> datas, Context context) {
+			this.context = context;
+			this.datas = datas;
+		}
+	
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+			return datas.size();
+		}
+	
+		@Override
+		public Object getItem(int arg0) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+	
+		@Override
+		public long getItemId(int arg0) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+	
+		@Override
+		public View getView(final int arg0, View arg1, ViewGroup arg2) {
+			// TODO Auto-generated method stub
+			arg1 = LayoutInflater.from(context).inflate(
+					R.layout.horizontal_list_view_items, null);
+			Button button = (Button) arg1
+					.findViewById(R.id.order_user_classify_HorizontalListView_item);
+			button.setText(datas.get(arg0));
+			button.setOnClickListener(new OnClickListener() {
+	
+				@Override
+				public void onClick(View v) {
+					// TODO Auto-generated method stub
+					changeFoodByType(datas.get(arg0),
+							order_user_classify_button.getText().toString());
+				}
+			});
+			return arg1;
+		}
+	
+	}
+	/**
+	 * @description 已点食物适配器
+	 * @version 1.0
+	 * @author zdq
+	 * @update 2013-8-10 上午1:45:25
+	 */
+
+	class alreadyfoodlistadapter extends BaseAdapter {
+
+		Context context;
+		ArrayList<FoodBean> foodBeans;
+
+		public alreadyfoodlistadapter(ArrayList<FoodBean> foodBeans,
+				Context context) {
+			this.foodBeans = foodBeans;
+			this.context = context;
+		}
+
+		@Override
+		public int getCount() {
+			// TODO Auto-generated method stub
+			return foodBeans.size();
+		}
+
+		@Override
+		public Object getItem(int position) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public long getItemId(int position) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public View getView(final int position, View convertView,
+				ViewGroup parent) {
+			// TODO Auto-generated method stub
+			convertView = LayoutInflater.from(context).inflate(
+					R.layout.order_user_already_foodlist_item, null);
+			CheckBox checkBox = (CheckBox) convertView
+					.findViewById(R.id.order_user_already_food_checkbox);
+			checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView,
+						boolean isChecked) {
+					// TODO Auto-generated method stub
+					if (isChecked) {
+						foodBeans.get(position).setEdit(true);
+					}
+				}
+			});
+
+			TextView name = (TextView) convertView
+					.findViewById(R.id.order_user_already_food_name);
+			name.setText(foodBeans.get(position).getName());
+			final EditText price = (EditText) convertView
+					.findViewById(R.id.order_user_already_food_price);
+			final String foodprice = foodBeans.get(position).getPrice();
+			price.setText(foodprice);
+
+			price.addTextChangedListener(new TextWatcher() {
+
+				@Override
+				public void onTextChanged(CharSequence s, int start,
+						int before, int count) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void beforeTextChanged(CharSequence s, int start,
+						int count, int after) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void afterTextChanged(Editable s) {
+					// TODO Auto-generated method stub
+					
+					if (!price.getText().toString().equals("")) {
+
+						pay_money = pay_money
+								- Integer.valueOf(foodBeans.get(position)
+										.getCount())
+								* Float.valueOf(foodBeans.get(position)
+										.getFoodtprice())
+								+ Integer.valueOf(foodBeans.get(position)
+										.getCount())
+								* Float.valueOf(price.getText().toString());
+						order_user_item_text_money.setText("总金额："
+								+ String.valueOf(pay_money));
+						foodBeans.get(position).setFoodtprice(
+								price.getText().toString());
+					} else
+
+						price.setText(foodprice);
+
+				}
+			});
+			final EditText num = (EditText) convertView
+					.findViewById(R.id.order_user_already_food_number);
+			if (foodBeans.get(position).getCount() == null) {
+				num.setText("1");
+				foodBeans.get(position).setCount("1");
+			} else {
+				num.setText(foodBeans.get(position).getCount());
+
+			}
+
+			num.addTextChangedListener(new TextWatcher() {
+
+				@Override
+				public void onTextChanged(CharSequence s, int start,
+						int before, int count) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void beforeTextChanged(CharSequence s, int start,
+						int count, int after) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void afterTextChanged(Editable s) {
+					// TODO Auto-generated method stub
+
+					if (!num.getText().toString().equals("")) {
+						pay_money = pay_money
+								- Integer.valueOf(foodBeans.get(position)
+										.getCount())
+								* Float.valueOf(foodBeans.get(position)
+										.getPrice())
+								+ Integer.valueOf(num.getText().toString())
+								* Float.valueOf(foodBeans.get(position)
+										.getPrice());
+						order_user_item_text_money.setText("总金额："
+								+ String.valueOf(pay_money));
+
+						foodBeans.get(position).setCount(
+								num.getText().toString());
+					} else
+						num.setText("1");
+				}
+			});
+			final EditText require = (EditText) convertView
+					.findViewById(R.id.order_user_already_food_require);
+			if (foodBeans.get(position).getFoodRequire() != null)
+				require.setText(foodBeans.get(position).getFoodRequire());
+			else
+				require.setText("");
+			foodBeans.get(position)
+					.setFoodRequire(require.getText().toString());
+			require.addTextChangedListener(new TextWatcher() {
+
+				@Override
+				public void onTextChanged(CharSequence s, int start,
+						int before, int count) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void beforeTextChanged(CharSequence s, int start,
+						int count, int after) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void afterTextChanged(Editable s) {
+					// TODO Auto-generated method stub
+					foodBeans.get(position).setFoodRequire(
+							require.getText().toString());
+				}
+			});
+			TextView meal = (TextView) convertView
+					.findViewById(R.id.order_user_already_food_meal);
+			meal.setText(foodBeans.get(position).getMealTimes());
+			TextView date = (TextView) convertView
+					.findViewById(R.id.order_user_already_food_date);
+			String[] s = foodBeans.get(position).getDate().split("-");
+			date.setText(s[1] + "-" + s[2]);
+
+			return convertView;
+		}
+
+	}
+	@Override
+	public void adapterButtonClick(Button b, String buttonName,int position) {
+		// TODO Auto-generated method stub
+		if(buttonName.equals("details"))
+		{
+			AlertDialog alertDialog = showFoodDetailDialog(Fooddata
+					.get(position));
+			alertDialog.show();
+		}else if(buttonName.equals("classify"))
+		{
+			changeFoodByType(b.getText().toString(),
+					order_user_classify_button.getText().toString());
+		}
+		
+	}
+
+	@Override
+	public void adapterTextChanged(EditText s, String editTextName,int position) {
+		// TODO Auto-generated method stub
+		
+		if(editTextName.equals("price"))
+		{
+			if (!s.getText().toString().equals("")) {
+
+				pay_money = pay_money
+						- Integer.valueOf(alreadyfoodlist.get(position)
+								.getCount())
+						* Float.valueOf(alreadyfoodlist.get(position)
+								.getFoodtprice())
+						+ Integer.valueOf(alreadyfoodlist.get(position)
+								.getCount())
+						* Float.valueOf(s.getText().toString());
+				order_user_item_text_money.setText("总金额："
+						+ String.valueOf(pay_money));
+				alreadyfoodlist.get(position).setFoodtprice(
+						s.getText().toString());
+			} else
+
+				s.setText(foodprice);
+
+		}
+	}
+
+	@Override
+	public void adapterCheckedChanged(boolean isChecked, String CheckBoxName,int position) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	
+	
+
+}

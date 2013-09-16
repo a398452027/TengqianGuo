@@ -1,0 +1,25 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.AndroidEventManager;
+import com.xbcx.core.XApplication;
+
+
+public class TestApp extends XApplication{
+	
+	@Override
+	public void onCreate() {
+		// TODO Auto-generated method stub
+		super.onCreate();
+		initHttpRunner();
+		
+		
+		
+	}
+	private void initHttpRunner(){
+		AndroidEventManager eventManager = AndroidEventManager.getInstance();
+		eventManager.registerEventRunner(JHEventCode.HTTP_Login, new LoginRunner());
+	
+	}
+	
+
+}

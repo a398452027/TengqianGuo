@@ -1,0 +1,10 @@
+package com.example.httpdemo;
+
+import com.xbcx.core.XApplication;
+
+public class TestApp extends XApplication{
+	
+	
+	
+
+}
